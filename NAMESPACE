@@ -1,0 +1,11 @@
+useDynLib(l2inv)
+
+export(l2inv,ojsinv,lrinv,
+       l2invseq,ojsinvseq,
+       lrinvseq,histMatch)
+importFrom(parallel,makeCluster)
+importFrom(parallel,parApply)
+importFrom(parallel,stopCluster)
+importFrom(lhs,maximinLHS)
+importFrom(lhs,randomLHS)
+importFrom(gss,ssanova)

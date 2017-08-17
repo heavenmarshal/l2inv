@@ -1,0 +1,2 @@
+PKG_CFLAGS = -DRPRINT  -I include ## -UNDEBUG
+PKG_LIBS = -L/usr/local/lib -lmsRblas -lmsRlapack ${FLIBS}

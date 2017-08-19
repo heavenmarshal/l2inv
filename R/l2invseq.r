@@ -57,7 +57,7 @@ ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
                       func,...,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
-    lw <- log(colMeans((yi-yobs)^2))
+    lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
     for(i in 1:nadd)
     {
@@ -71,7 +71,7 @@ ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,]
-        newlw <- log(mean((newy-yobs)^2))
+        newlw <- sqrt(sum((newy-yobs)^2))
         wmin <- min(wmin,newlw)
         lw <- c(lw,newlw)
     }

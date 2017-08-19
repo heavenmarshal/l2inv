@@ -35,7 +35,7 @@ ojsinv <- function(design,resp,yobs,feasible,mtype=c("zmean","cmean","lmean"),
     isnmis <- !is.na(yobs)
     yobsred <- yobs[isnmis]
     respred <- resp[isnmis,]
-    dev <- apply((respred-yobsred)^2,2,sum)
+    dev <- sqrt(apply((respred-yobsred)^2,2,sum))
     gpobj <- if(mtype=="zmean") gpsepms(dev,design,d,g) else gpseplmms(dev,design,mtype,d,g)
     py <- predict(gpobj,feasible)
     criter <- py$mean + qnorm(q)*sqrt(py$s2)

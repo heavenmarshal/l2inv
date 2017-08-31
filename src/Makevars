@@ -1,2 +1,2 @@
-PKG_CFLAGS = -DRPRINT  -I include ## -UNDEBUG
-PKG_LIBS = -L/usr/local/lib -lmsRblas -lmsRlapack ${FLIBS}
+PKG_CFLAGS = -DRPRINT  -I include `gsl-config --cflags` ## -UNDEBUG
+PKG_LIBS = -L/usr/local/lib -lmsRblas -lmsRlapack ${FLIBS} `gsl-config --libs`

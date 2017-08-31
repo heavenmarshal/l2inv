@@ -1,58 +1,21 @@
-naiveinfo <- function(py,alpha,cht,valist)
-{
-    infomat <- alpha*py$coeffs2-(py$coeff-cht)^2
-    info <- infomat*py$d2
-    info <- apply(info,2,sum)
-}
-norminfo <- function(py,alpha,cht,valist)
-{
-    varp <- apply(py$coeffs2*py$d2,2,sum)
-    devp <- apply(py$d2*(py$coeff-cht)^2,2,sum)
-    stdvarp <- (varp-mean(varp))/sd(varp)
-    stddevp <- (devp-mean(devp))/sd(devp)
-    info <- alpha*stdvarp - stddevp
-}
-mvconinfo <- function(py,alpha,cht,valist)
-{
-    barrier <- alpha * apply(py$coeffs2*py$d2,2,sum)
-    numbas <- nrow(py$coeff)
-    nfea <- ncol(py$coeff)
-    out <- .C("mvcon_R", as.double(py$coeff), as.double(py$coeffs2),
-              as.double(barrier), as.double(cht), as.double(py$d2),
-              as.double(nfea), as.double(valist$nmc), as.integer(numbas),
-              ans=double(nfea), PACKAGE="l2inv")
-    info <- out$ans
-}
-coneinfo <- function(py,alpha,cht,valist)
-{
-    mse <- py$coeffs2
-    se <- sqrt(mse)
-    norm <- (cht-py$coeff)/se
-    u2 <- norm+alpha
-    u1 <- norm-alpha
-    du2 <- dnorm(u2)
-    du1 <- dnorm(u1)
-    part1 <- mse*(alpha*alpha-norm*norm-1)*(pnorm(u2)-pnorm(u1))
-    part2 <- mse*(u2*du2-u1*du1)
-    part3 <- -2*norm*mse*(du2-du1)
-    info <- part1+part2+part3
-    info <- ifelse(is.na(info) | is.infinite(info),0,info)
-    info <- apply(info*py$d2,2,sum)
-}
-l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
-                     func,...,type=c("naive","norm","mvcon","cone"),
-                     frac=.95,d=NULL,g=0.001,nmc=500,nthread=4)
+l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
+                     type=c("naive","norm","mvcon","mvapp","convc","cone"),
+                     mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
+                     valist=list(nmc=500,beta=.5),nthread=4)
 {
     xi <- as.matrix(xi)
     type <- match.arg(type)
+    mtype <- match.arg(mtype)
     infoname <- paste(type,"info",sep="")
     infofun <- get(infoname)
-    valist <- list(nmc=nmc)
+    valist.default <- list(nmc=500,beta=.5)
+    remnames <- setdiff(names(valist.default),names(valist))
+    valist <- c(valist,valist.default[remnames])
     for(i in 1:nadd)
     {
         lbasis <- buildBasis(yi,frac)
         cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
-        py <- svdgpsepms(feasible,xi,yi,frac,nthread=nthread)
+        py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
@@ -64,14 +27,6 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
     ret <- list(xx=xi,yy=yi,xopt=xopt)
     return(ret)
-}
-mininfo <- function(py,cmin)
-{
-    ave <- py$mean
-    se <- sqrt(py$s2)
-    norm <- (cmin-ave)/se
-    info <- ifelse(is.infinite(norm),0,
-                   se*(norm*pnorm(norm)+dnorm(norm)))
 }
 ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
                       func,...,d=NULL,g=0.001)

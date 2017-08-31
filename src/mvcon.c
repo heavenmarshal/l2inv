@@ -19,7 +19,7 @@ void mvcon(double** coefmean, double** coefsd,
       for(k = 0; k < numbas; ++k)
       {
 	u   = norm_rand();
-	fv -= dsq[k]*SQ(u*coefsd[i][k]+coefmean[i][k]-chatstar[i]);
+	fv -= dsq[k]*SQ(u*coefsd[i][k]+coefmean[i][k]-chatstar[k]);
       }
       if(fv>0)
 	sum += fv;

@@ -1,7 +1,9 @@
-l2inv <- function(design,resp,yobs,feasible,frac=.95,maxiter=50,tol=1e-3,d=NULL,g=0.001)
+l2inv <- function(design,resp,yobs,feasible,frac=.95,
+                  mtype=c("zmean","cmean","lmean"),
+                  maxiter=50,tol=1e-3,d=NULL,g=0.001)
 {
+    mtype <- match.arg(mtype)
     design <- as.matrix(design)
-
     lbasis <- buildBasis(resp,frac)
     if(any(is.na(yobs)))
     {
@@ -19,7 +21,7 @@ l2inv <- function(design,resp,yobs,feasible,frac=.95,maxiter=50,tol=1e-3,d=NULL,
     for(i in 1:numbas)
     {
         ccoeff <- coeff[,i]
-        gpobj <- gpsepms(ccoeff,design,d,g)
+        gpobj <- if(mtype=="zmean") gpsepms(ccoeff,design,d,g) else gpseplmms(ccoeff,design,mtype,d,g)
         pred <- predict(gpobj,feasible)
         delete(gpobj)
         criter <- criter+reddsq[i]*(pred$s2+(pred$mean-cht[i])^2)

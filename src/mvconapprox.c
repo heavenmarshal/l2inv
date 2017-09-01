@@ -54,7 +54,7 @@ double logdkappa2(double x, void* param)
   double dkaseq = dkappaSeq(x,param);
   double barval = ppar -> barval;
   double dkap2 = dkappa2(x,param);
-  double dkap = dkappaSeq(x,param)+barval;
+  double dkap = dkaseq+barval;
   return dkap2/dkap;
 }
 void dkappadd(double x, void *param,
@@ -94,6 +94,85 @@ void logdkappadd(double x, void *param,
   *fv = log(dkap)-log(barval);
   *dfv = dkap2/dkap;
 }
+/* double transfun(double x, double upb) */
+/* { */
+/*   double y = x>0? upb - exp(-x): x+upb-1.0; */
+/*   return y; */
+/* } */
+/* double dtransfun(double x) */
+/* { */
+/*   double y = x>0? exp(-x): 1.0; */
+/* } */
+/* double transdkappaSeq(double x, void *param) */
+/* { */
+/*   int i, p; */
+/*   parDkaps* ppar = (parDkaps*) param; */
+/*   p = ppar -> p; */
+/*   const double *sig2 = ppar -> sig2; */
+/*   const double *mu2 = ppar -> mu2; */
+/*   double barval = ppar -> barval; */
+/*   double upb = ppar -> upb; */
+/*   double xt = transfun(x,upb); */
+/*   double denom, dkappa = 0.0; */
+/*   for(i=0; i!=p; ++i) */
+/*   { */
+/*     denom = 1.0 - 2.0*sig2[i]*xt; */
+/*     dkappa += sig2[i]/denom; */
+/*     dkappa += 4.0*sig2[i]*mu2[i]*(1.0-sig2[i]*xt)*xt/denom/denom; */
+/*     dkappa += mu2[i]; */
+/*   } */
+/*   return dkappa - barval; */
+/* } */
+/* double transdkappa2(double x, void* param) */
+/* { */
+/*   int i, p; */
+/*   parDkaps* ppar = (parDkaps*) param; */
+/*   p = ppar -> p; */
+/*   const double *sig2 = ppar -> sig2; */
+/*   const double *mu2 = ppar -> mu2; */
+/*   double upb = ppar -> upb; */
+/*   double dkappa2 = 0.0; */
+/*   double xt = transfun(x,upb); */
+/*   double dxt = dtransfun(x); */
+/*   double denom, denom2; */
+/*   for(i=0; i!=p; ++i) */
+/*   { */
+/*     denom = 1.0 - 2.0*sig2[i]*xt; */
+/*     denom2 = denom * denom; */
+/*     dkappa2 += 2.0*sig2[i]*sig2[i]/denom2; */
+/*     dkappa2 += 4.0*sig2[i]*mu2[i]/denom2/denom; */
+/*   } */
+/*   dkappa2 *= dxt; */
+/*   return dkappa2; */
+/* } */
+/* void transdkappadd(double x, void *param, */
+/* 		   double* fv, double* dfv) */
+/* { */
+/*   int i, p; */
+/*   parDkaps* ppar = (parDkaps*) param; */
+/*   p = ppar -> p; */
+/*   const double *sig2 = ppar -> sig2; */
+/*   const double *mu2 = ppar -> mu2; */
+/*   double barval = ppar -> barval; */
+/*   double upb = ppar -> upb; */
+/*   double xt = transfun(x,upb); */
+/*   double dxt = dtransfun(x); */
+/*   double denom, denom2, sigfmu; */
+/*   double dkappa = 0.0, dkappa2 = 0.0; */
+/*   for(i = 0; i !=p; ++i) */
+/*   { */
+/*     denom = 1.0 - 2.0*sig2[i]*xt; */
+/*     denom2 = denom*denom; */
+/*     sigfmu = 4.0*sig2[i]*mu2[i]; */
+/*     dkappa += sig2[i]/denom; */
+/*     dkappa += sigfmu * (1.0-sig2[i]*xt)*xt/denom2; */
+/*     dkappa += mu2[i]; */
+/*     dkappa2 += 2.0*sig2[i]*sig2[i]/denom2; */
+/*     dkappa2 += sigfmu/denom2/denom; */
+/*   } */
+/*   *fv = dkappa - barval; */
+/*   *dfv = dkappa2*dxt; */
+/* } */
 void kappafs(double x, const double* sig2,
 	     const double* mu2, int p,
 	     double* kappa, double* kappa2,
@@ -161,9 +240,7 @@ void saddleapprox(const double* sig2m, const double *mu2m,
     stat = newtonsolver(0.5*upb[i], &dkappaSeq, &dkappa2,
     			&dkappadd, (void*) &param, &tval,
     			100, 1E-8, 1E-10);
-    /* stat = newtonsolver(0.5*upb[i], &logdkappaSeq, &logdkappa2, */
-    /* 			&logdkappadd, (void*) &param, &tval, */
-    /* 			100, 1E-8, 1E-10); */
+
     if(stat != success)
     {
       info[i] = NAN; 		// na

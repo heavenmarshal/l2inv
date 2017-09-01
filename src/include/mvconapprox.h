@@ -7,6 +7,7 @@ typedef struct
   const double *sig2;
   const double *mu2;
   double barval;
+  /* double upb; */
 } parDkaps;
 double dkappaSeq(double, void*);
 double dkappa2(double, void*);

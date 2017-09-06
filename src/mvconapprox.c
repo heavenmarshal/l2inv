@@ -1,6 +1,8 @@
 #include<Rmath.h>
 #include"newtonsolver.h"
 #include"mvconapprox.h"
+#include"nleqslv.h"
+
 #define SQRPI2 2.50662827463
 #define SGN(x) ((double)((0.0<x)-(0.0>x)))
 
@@ -94,57 +96,57 @@ void logdkappadd(double x, void *param,
   *fv = log(dkap)-log(barval);
   *dfv = dkap2/dkap;
 }
-/* double transfun(double x, double upb) */
-/* { */
-/*   double y = x>0? upb - exp(-x): x+upb-1.0; */
-/*   return y; */
-/* } */
-/* double dtransfun(double x) */
-/* { */
-/*   double y = x>0? exp(-x): 1.0; */
-/* } */
-/* double transdkappaSeq(double x, void *param) */
-/* { */
-/*   int i, p; */
-/*   parDkaps* ppar = (parDkaps*) param; */
-/*   p = ppar -> p; */
-/*   const double *sig2 = ppar -> sig2; */
-/*   const double *mu2 = ppar -> mu2; */
-/*   double barval = ppar -> barval; */
-/*   double upb = ppar -> upb; */
-/*   double xt = transfun(x,upb); */
-/*   double denom, dkappa = 0.0; */
-/*   for(i=0; i!=p; ++i) */
-/*   { */
-/*     denom = 1.0 - 2.0*sig2[i]*xt; */
-/*     dkappa += sig2[i]/denom; */
-/*     dkappa += 4.0*sig2[i]*mu2[i]*(1.0-sig2[i]*xt)*xt/denom/denom; */
-/*     dkappa += mu2[i]; */
-/*   } */
-/*   return dkappa - barval; */
-/* } */
-/* double transdkappa2(double x, void* param) */
-/* { */
-/*   int i, p; */
-/*   parDkaps* ppar = (parDkaps*) param; */
-/*   p = ppar -> p; */
-/*   const double *sig2 = ppar -> sig2; */
-/*   const double *mu2 = ppar -> mu2; */
-/*   double upb = ppar -> upb; */
-/*   double dkappa2 = 0.0; */
-/*   double xt = transfun(x,upb); */
-/*   double dxt = dtransfun(x); */
-/*   double denom, denom2; */
-/*   for(i=0; i!=p; ++i) */
-/*   { */
-/*     denom = 1.0 - 2.0*sig2[i]*xt; */
-/*     denom2 = denom * denom; */
-/*     dkappa2 += 2.0*sig2[i]*sig2[i]/denom2; */
-/*     dkappa2 += 4.0*sig2[i]*mu2[i]/denom2/denom; */
-/*   } */
-/*   dkappa2 *= dxt; */
-/*   return dkappa2; */
-/* } */
+double transfun(double x, double upb)
+{
+  double y = x>0? upb - exp(-x): x+upb-1.0;
+  return y;
+}
+double dtransfun(double x)
+{
+  double y = x>0? exp(-x): 1.0;
+}
+double transdkappaSeq(double x, void *param)
+{
+  int i, p;
+  parDkaps* ppar = (parDkaps*) param;
+  p = ppar -> p;
+  const double *sig2 = ppar -> sig2;
+  const double *mu2 = ppar -> mu2;
+  double barval = ppar -> barval;
+  double upb = ppar -> upb;
+  double xt = transfun(x,upb);
+  double denom, dkappa = 0.0;
+  for(i=0; i!=p; ++i)
+  {
+    denom = 1.0 - 2.0*sig2[i]*xt;
+    dkappa += sig2[i]/denom;
+    dkappa += 4.0*sig2[i]*mu2[i]*(1.0-sig2[i]*xt)*xt/denom/denom;
+    dkappa += mu2[i];
+  }
+  return dkappa - barval;
+}
+double transdkappa2(double x, void* param)
+{
+  int i, p;
+  parDkaps* ppar = (parDkaps*) param;
+  p = ppar -> p;
+  const double *sig2 = ppar -> sig2;
+  const double *mu2 = ppar -> mu2;
+  double upb = ppar -> upb;
+  double dkappa2 = 0.0;
+  double xt = transfun(x,upb);
+  double dxt = dtransfun(x);
+  double denom, denom2;
+  for(i=0; i!=p; ++i)
+  {
+    denom = 1.0 - 2.0*sig2[i]*xt;
+    denom2 = denom * denom;
+    dkappa2 += 2.0*sig2[i]*sig2[i]/denom2;
+    dkappa2 += 4.0*sig2[i]*mu2[i]/denom2/denom;
+  }
+  dkappa2 *= dxt;
+  return dkappa2;
+}
 /* void transdkappadd(double x, void *param, */
 /* 		   double* fv, double* dfv) */
 /* { */
@@ -235,7 +237,7 @@ void saddleapprox(const double* sig2m, const double *mu2m,
   int i, j, stat;
   for(i = 0, j = 0; i != n; ++i, j+=p)
   {
-    parDkaps param = {p, sig2m+j, mu2m+j, barval[i]};
+    parDkaps param = {p, sig2m+j, mu2m+j, barval[i], upb[i]};
 
     stat = newtonsolver(0.5*upb[i], &dkappaSeq, &dkappa2,
     			&dkappadd, (void*) &param, &tval,
@@ -243,8 +245,15 @@ void saddleapprox(const double* sig2m, const double *mu2m,
 
     if(stat != success)
     {
-      info[i] = NAN; 		// na
-      continue;
+      /* call more expensive solution */
+      stat = nleqslv(0.0, &transdkappaSeq, &transdkappa2,
+		     (void*) &param, &tval, 100, 1E-8, 1E-8);
+      if(stat != success)
+      {
+	info[i] = NAN; 		// na
+	continue;
+      }
+      tval = transfun(tval,upb[i]);
     }
     kappafs(tval,&sig2m[j],&mu2m[j],p,
 	    &kp, &dk2, &dk3);

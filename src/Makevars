@@ -1,2 +1,4 @@
-PKG_CFLAGS = -DRPRINT  -I include `gsl-config --cflags` ## -UNDEBUG
-PKG_LIBS = -L/usr/local/lib -lmsRblas -lmsRlapack ${FLIBS} `gsl-config --libs`
+NLEQ_FLAG = `echo 'library(nleqslv); cat(system.file(package="nleqslv",mustWork=TRUE))'\
+| "${R_HOME}/bin/R" --vanilla --slave`/libs/nleqslv.so
+PKG_CFLAGS = -O0 -DRPRINT  -I include `gsl-config --cflags` ## -UNDEBUG
+PKG_LIBS = -L/usr/local/lib -lmsRblas -lmsRlapack ${FLIBS} `gsl-config --libs` ${NLEQ_FLAG}

@@ -1,5 +1,5 @@
 l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
-                     type=c("naive","norm","mvcon","mvapp","convc","cone"),
+                     type=c("naive","mvcon","mvapp"),
                      mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
                      valist=list(nmc=500,beta=.5),nthread=4)
 {

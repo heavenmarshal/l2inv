@@ -4,21 +4,6 @@ naiveinfo <- function(py,alpha,cht,valist)
     info <- infomat*py$d2
     info <- apply(info,2,sum)
 }
-convcinfo <- function(py,alpha,cht,valist)
-{
-    beta <- valist$beta
-    infomat <- alpha*beta*py$coeffs2-(1-beta)*(py$coeff-cht)^2
-    info <- infomat*py$d2
-    info <- apply(info,2,sum)
-}
-norminfo <- function(py,alpha,cht,valist)
-{
-    varp <- apply(py$coeffs2*py$d2,2,sum)
-    devp <- apply(py$d2*(py$coeff-cht)^2,2,sum)
-    stdvarp <- (varp-mean(varp))/sd(varp)
-    stddevp <- (devp-mean(devp))/sd(devp)
-    info <- alpha*stdvarp - stddevp
-}
 mvconinfo <- function(py,alpha,cht,valist)
 {
     barrier <- alpha * apply(py$coeffs2*py$d2,2,sum)
@@ -45,23 +30,6 @@ mvappinfo <- function(py,alpha,cht,valist)
               as.integer(n), as.integer(p), ans=double(n))
     info <- out$ans-mumk
     return(info)
-}
-
-coneinfo <- function(py,alpha,cht,valist)
-{
-    mse <- py$coeffs2
-    se <- sqrt(mse)
-    norm <- (cht-py$coeff)/se
-    u2 <- norm+alpha
-    u1 <- norm-alpha
-    du2 <- dnorm(u2)
-    du1 <- dnorm(u1)
-    part1 <- mse*(alpha*alpha-norm*norm-1)*(pnorm(u2)-pnorm(u1))
-    part2 <- mse*(u2*du2-u1*du1)
-    part3 <- -2*norm*mse*(du2-du1)
-    info <- part1+part2+part3
-    info <- ifelse(is.na(info) | is.infinite(info),0,info)
-    info <- apply(info*py$d2,2,sum)
 }
 mininfo <- function(py,cmin)
 {

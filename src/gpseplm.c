@@ -28,7 +28,7 @@ void deleteGPsepLm(GPsepLm* gplm)
   assert(gplm->gpsep);
   deleteGPsep(gplm->gpsep);
   assert(gplm->H);
-  delete_matrix(gplm->H);    
+  delete_matrix(gplm->H);
   assert(gplm->beta);
   free(gplm->beta);
   assert(gplm->Kires);
@@ -61,7 +61,7 @@ void calc_HtKiH_sepLm(GPsepLm* gplm)
   linalg_dgemv(CblasTrans,p,n,-1.0,gplm->H,p,gplm->beta,1,1.0,resid,1);
 
   linalg_dsymv(n,1.0,gplm->gpsep->Ki,n,resid,1,0.0,gplm->Kires,1);
-  
+
   linalg_dgemm(CblasTrans,CblasNoTrans,n,n,p,1.0,gplm->KiH,p,HtKiHiHtKi,
 	       p,0.0,gplm->Kernel,n);
   gplm->psi = linalg_ddot(n,gplm->gpsep->Z,1,gplm->Kires,1);
@@ -591,7 +591,7 @@ void predGPsepLm_lite(GPsepLm* gplm, unsigned int nn, double **XX, double **HH,
 {
   unsigned int i, n, p;
   double **k, **ktKi, *ktKik;
-  double **hoffset, **HtKiHi, **Chol, *HtKiHio; 
+  double **hoffset, **HtKiHi, **Chol, *HtKiHio;
   double psidf, qoffset, g;
   GPsep *gpsep;
   gpsep = gplm -> gpsep;
@@ -610,7 +610,7 @@ void predGPsepLm_lite(GPsepLm* gplm, unsigned int nn, double **XX, double **HH,
     linalg_dposv(p,Chol,HtKiHi); /* may need check info */
     hoffset = new_dup_matrix(HH,nn,p);
     linalg_dgemm(CblasNoTrans,CblasTrans,p,nn,n,-1.0,gplm->KiH,
-		 p,k,nn,0.0,hoffset,p);
+		 p,k,nn,1.0,hoffset,p);
     HtKiHio = new_vector(p);
     psidf = gplm->psi/(*df);
     for(i=0; i<nn; ++i)

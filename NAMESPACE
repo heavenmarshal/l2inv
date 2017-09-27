@@ -6,7 +6,9 @@ export(l2inv,ojsinv,lrinv,
        l2invseqtr,ojsinvseqtr,
        lrinvseqtr,l2invseqset,
        ojsinvseqset,lrinvseqset,
-       histMatchset,l2invseqad)
+       histMatchset,l2invseqad,
+       l2invseqtrace,ojsinvseqtrace,
+       lrinvseqtrace)
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)

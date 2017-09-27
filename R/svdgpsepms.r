@@ -1,6 +1,7 @@
 fitgps_zmean <- function(resp,design,test,nstarts=5,d=NULL,g=0.001,type="zmean")
 {
     din <- ncol(design)
+    if(!is.matrix(test)) test <- matrix(test,ncol=din)
     d <- darg(d,design)
     g <- garg(g,resp)
     parb <- lhs::maximinLHS(nstarts,din+1)
@@ -31,6 +32,7 @@ fitgps_zmean <- function(resp,design,test,nstarts=5,d=NULL,g=0.001,type="zmean")
 fitgps_lmean <- function(resp,design,test,nstarts=5,d=NULL,g=0.001,type=c("cmean","lmean"))
 {
     din <- ncol(design)
+    if(!is.matrix(test)) test <- matrix(test,ncol=din)
     d <- darg(d,design)
     g <- garg(g,resp)
     parb <- lhs::maximinLHS(nstarts,din+1)

@@ -7,7 +7,7 @@ newGPsepLm <- function(X, Z, d, g, dK, mtype=c("cmean","lmean"))
     if(length(d) == 1) d <- rep(d, m)
     else if(length(d) != m) stop("must have length(d) = ncol(X)")
     mtype=match.arg(mtype)
-    H <- if(mtype=="cmeam") rep(1,n) else cbind(rep(1,n),X)
+    H <- if(mtype=="cmean") rep(1,n) else cbind(rep(1,n),X)
     p <- if(mtype=="cmean") 1 else m+1
     out <- .C("newGPsepLm_R",
               m = as.integer(m),
@@ -20,7 +20,7 @@ newGPsepLm <- function(X, Z, d, g, dK, mtype=c("cmean","lmean"))
               p = as.integer(p),
               H = as.double(t(H)),
               gplmi = integer(1),
-			  package="l2inv"
+              package="l2inv"
               )
     return(out$gplmi)
 }
@@ -29,13 +29,13 @@ deleteGPsepLm <- function(gplmi)
 {
     .C("deleteGPsepLm_R",
        gplmi = as.integer(gplmi),
-	   package = "l2inv")
+       package = "l2inv")
     invisible(NULL)
 }
 deleteGPsepLms <- function()
 {
     .C("deleteGPsepLms_R",
-		package="l2inv")
+       package="l2inv")
     invisible(NULL)
 }
 
@@ -80,7 +80,7 @@ jmleGPsepLm <- function(gplmi, drange=c(sqrt(.Machine$double.eps), 10),
             dits = integer(1),
             gits = integer(1),
             dconv = integer(1),
-			package = "l2inv")
+            package = "l2inv")
 
     return(data.frame(d=t(r$d), g=r$g, tot.its=r$dits+r$gits,
                       dits=r$dits, gits=r$gits, dconv=r$dconv))
@@ -102,7 +102,7 @@ predGPsepLm <- function(gplmi, XX, mtype=c("cmean","lmean"))
     nn <- nrow(XX)
     m <- ncol(XX)
     mtype <- match.arg(mtype)
-    HH <- if(mtype=="cmeam") rep(1,nn) else cbind(rep(1,nn),XX)
+    HH <- if(mtype=="cmean") rep(1,nn) else cbind(rep(1,nn),XX)
     p <- if(mtype=="cmean") 1 else m+1
     out <- .C("predGPsepLm_R",
               gplmi = as.integer(gplmi),
@@ -115,6 +115,6 @@ predGPsepLm <- function(gplmi, XX, mtype=c("cmean","lmean"))
               s2 = double(nn),
               df = double(1),
               llik = double(1),
-			  package="l2inv")
+              package="l2inv")
     return(list(mean=out$mean, s2=out$s2, df=out$df, llik=out$llik))
 }

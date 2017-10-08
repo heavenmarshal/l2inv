@@ -8,7 +8,7 @@ export(l2inv,ojsinv,lrinv,
        ojsinvseqset,lrinvseqset,
        histMatchset,l2invseqad,
        l2invseqtrace,ojsinvseqtrace,
-       lrinvseqtrace)
+       lrinvseqtrace,svdgpsepms)
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)

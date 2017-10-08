@@ -239,22 +239,22 @@ void saddleapprox(const double* sig2m, const double *mu2m,
   {
     parDkaps param = {p, sig2m+j, mu2m+j, barval[i], upb[i]};
 
-    stat = newtonsolver(0.5*upb[i], &dkappaSeq, &dkappa2,
-    			&dkappadd, (void*) &param, &tval,
-    			100, 1E-8, 1E-10);
+    /* stat = newtonsolver(0.5*upb[i], &dkappaSeq, &dkappa2, */
+    /* 			&dkappadd, (void*) &param, &tval, */
+    /* 			100, 1E-8, 1E-10); */
 
+    /* if(stat != success) */
+    /* { */
+      /* call more expensive solution */
+    stat = nleqslv(0.0, &transdkappaSeq, &transdkappa2,
+		   (void*) &param, &tval, 100, 1E-8, 1E-8);
     if(stat != success)
     {
-      /* call more expensive solution */
-      stat = nleqslv(0.0, &transdkappaSeq, &transdkappa2,
-		     (void*) &param, &tval, 100, 1E-8, 1E-8);
-      if(stat != success)
-      {
-	info[i] = NAN; 		// na
-	continue;
-      }
-      tval = transfun(tval,upb[i]);
+      info[i] = NAN; 		// na
+      continue;
     }
+    tval = transfun(tval,upb[i]);
+    /* } */
     kappafs(tval,&sig2m[j],&mu2m[j],p,
 	    &kp, &dk2, &dk3);
     sgnt = SGN(tval);

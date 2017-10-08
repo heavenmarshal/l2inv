@@ -1,5 +1,5 @@
 l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
-                     type=c("naive","cone","mvcon","mvapp","mvext","mvei"),
+                     type=c("naive","mvcon","mvapp","mvei","oei"),
                      mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
                      valist=list(nmc=500),nthread=4)
 {
@@ -12,12 +12,14 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
     valist.default <- list(nmc=500)
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
+    valist$yobs <- yobs
     for(i in 1:nadd)
     {
         lbasis <- buildBasis(yi,frac)
         cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
         valist$chts2 <- drop(crossprod(yobs-lbasis$basis%*%cht))/tlen
         valist$mindist <- min(apply(lbasis$redd^2*(t(lbasis$coeff)-cht)^2,2,sum))
+        valist$barval <-  min(apply((yobs-yi)^2,2,sum))
         py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
         newidx <- which.max(info)

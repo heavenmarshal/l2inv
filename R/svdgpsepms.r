@@ -83,6 +83,7 @@ svdgpsepms <- function(X0,design,resp,frac=.95,nstart=5,mtype=c("zmean","cmean",
     vsigma2 <- matrix(unlist(sapply(ret,`[`,"s2")),nrow=numbas,byrow=TRUE)
     pmean <- basis%*%vmean
     psd <- sqrt(basis^2%*%vsigma2+varres)
-    ret <- list(mean=pmean,sd=psd,coeff=vmean,coeffs2=vsigma2,d2=lbasis$redd^2)
+    ret <- list(mean=pmean,sd=psd,coeff=vmean,coeffs2=vsigma2,d2=lbasis$redd^2,
+                basis=lbasis$basis,varres=varres)
     return(ret)
 }

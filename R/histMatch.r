@@ -25,7 +25,8 @@ maximp <- function(resp,design,yobs,feasible,mtype,sig2,
 histMatch <- function(xi,yi,yobs,timepoints,cutoff,budget,nfea,
                       mtype=c("zmean","cmean","lmean"),
                       featype=c("maximin","random"),
-                      func,...,d=NULL,g=0.001,nthread=4)
+                      func,...,estobsvar=FALSE,
+                      d=NULL,g=0.001,nthread=4)
 {
     mtype <- match.arg(mtype)
     featype <- match.arg(featype)
@@ -34,7 +35,7 @@ histMatch <- function(xi,yi,yobs,timepoints,cutoff,budget,nfea,
     xi <- as.matrix(xi)
     din <- ncol(xi)
     ndes <- nrow(xi)
-    sig2hat <- ssanova(yobs~timepoints,type="cubic",method="v")$varht
+    sig2hat <- if(estobsvar) ssanova(yobs~timepoints,type="cubic",method="v")$varht else 0
     nrem <- budget-ndes
     iteradd <- NULL
     while(nrem > 0)

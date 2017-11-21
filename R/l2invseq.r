@@ -1,7 +1,7 @@
 l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
-                     type=c("naive","mvcon","mvapp","mvei","oei"),
+                     type=c("mvapp","mvei","projei","oei"),
                      mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
-                     valist=list(nmc=500),nthread=4)
+                     valist=list(),nthread=4)
 {
     xi <- as.matrix(xi)
     type <- match.arg(type)

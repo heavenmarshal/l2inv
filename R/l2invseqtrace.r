@@ -1,5 +1,5 @@
 l2invseqtrace <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
-                          type=c("naive","mvcon","mvapp","mvei","oei"),
+                          type=c("mvapp","mvei","projei","oei"),
                           mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
                           valist=list(nmc=500),nthread=4)
 {
@@ -12,16 +12,22 @@ l2invseqtrace <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
     valist.default <- list(nmc=500)
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
+    valist$yobs <- yobs
     infotrace <- vector("list",length=nadd)
+    pytrace <- vector("list",length=nadd)
+    chttrace <- vector("list",length=nadd)
     for(i in 1:nadd)
     {
         lbasis <- buildBasis(yi,frac)
         cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
         valist$chts2 <- drop(crossprod(yobs-lbasis$basis%*%cht))/tlen
         valist$mindist <- min(apply(lbasis$redd^2*(t(lbasis$coeff)-cht)^2,2,sum))
+        valist$barval <-  min(apply((yobs-yi)^2,2,sum))
         py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
         infotrace[[i]] <- list(feasible=feasible,info=info)
+        pytrace[[i]] <- py
+        chttrace[[i]] <- cht
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
@@ -30,7 +36,8 @@ l2invseqtrace <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
         feasible <- feasible[-newidx,,drop=FALSE]
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
-    ret <- list(xx=xi,yy=yi,xopt=xopt,infotrace=infotrace)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,infotrace=infotrace,
+                pytrace=pytrace,chttrace=chttrace)
     return(ret)
 }
 ojsinvseqtrace <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),

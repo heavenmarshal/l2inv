@@ -1,27 +1,40 @@
-l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
-                        alpha,type=c("mvapp","mvei","projei","oei"),
-                        mtype=c("zmean","cmean","lmean"),
-                        frac=.95,d=NULL,g=0.001,valist=list(),nthread=4)
+l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
+                          alpha,type=c("mvapp","mvei","projei","oei"),
+                          mtype=c("zmean","cmean","lmean"),
+                          frac=.95,d=NULL,g=0.001,valist=list(),nthread=4)
 {
     xi <- as.matrix(xi)
+    nd <- ncol(xi)
     type <- match.arg(type)
     mtype <- match.arg(mtype)
     infoname <- paste(type,"info",sep="")
     tlen <- length(yobs)
     infofun <- get(infoname)
+    nfea <- nrow(feasible)
+    xoptr <- matrix(nrow=nadd+1,ncol=nd)
     valist.default <- list(nmc=500)
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
     for(i in 1:nadd)
     {
+        tfea <- rbind(feasible,grid)
         lbasis <- buildBasis(yi,frac)
         cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
         valist$chts2 <- drop(crossprod(yobs-lbasis$basis%*%cht))/tlen
         valist$mindist <- min(apply(lbasis$redd^2*(t(lbasis$coeff)-cht)^2,2,sum))
         valist$barval <-  min(apply((yobs-yi)^2,2,sum))
-        py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
-        info <- infofun(py,alpha,cht,valist)
+        py <- svdgpsepms(tfea,xi,yi,frac,mtype=mtype,nthread=nthread)
+        ## extract the part for feasible
+        pyfea <- list(d2=py$d2, coeffs2=py$coeffs2[,1:nfea],coeff=py$coeff[,1:nfea],basis=py$basis,varres=py$varres)
+        pygrid <- list(d2=py$d2, coeffs2=py$coeffs2[,-(1:nfea)],coeff=py$coeff[,-(1:nfea)])
+        numbas <- lbasis$numbas
+        if(numbas==1)
+            criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
+        else
+            criter <- apply(pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2),2,sum)
+        xoptr[i,] <- grid[which.min(criter),]
+        info <- infofun(pyfea,alpha,cht,valist)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- fearesp[,newidx]
@@ -29,27 +42,34 @@ l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,,drop=FALSE]
         fearesp <- fearesp[,-newidx,drop=FALSE]
+        nfea <- nfea-1
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
+    xoptr[nadd+1,] <- xopt
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
     return(ret)
 }
-ojsinvseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
-                         mtype=c("zmean","cmean","lmean"),
-                         d=NULL,g=0.001)
+ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
+                           mtype=c("zmean","cmean","lmean"),
+                           d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
+    nd <- ncol(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
+    xoptr <- matrix(nrow=nadd+1,ncol=nd)
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)
-        py <- predict(gpobj,feasible)
+        pyfea <- predict(gpobj,feasible)
+        pygrid <- predict(gpobj,grid)
         delete(gpobj)
-        info <- mininfo(py,wmin)
+        lwhat <- pygrid$mean
+        xoptr[i,] <- grid[which.min(lwhat),]
+        info <- mininfo(pyfea,wmin)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
-        newy <- fearesp[,newidx]
+        newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,,drop=FALSE]
@@ -59,16 +79,18 @@ ojsinvseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         lw <- c(lw,newlw)
     }
     xopt <- ojsinv(xi,yi,yobs,grid,mtype,d=d,g=g)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
+    xoptr[nadd+1,] <- xopt
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
     return(ret)
 }
-lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
-                        fearesp,mtype=c("zmean","cmean","lmean"),
-                        d=NULL,g=0.001,gl=0.1,nthread=4)
+lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
+                          fearesp,mtype=c("zmean","cmean","lmean"),
+                          d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
     xi <- as.matrix(xi)
+    nd <- ncol(xi)
     delta <- yi-yobs
     conlik <- -0.5*tlen*log(colMeans(delta^2))
     tinput <- as.matrix(timepoints)
@@ -79,15 +101,19 @@ lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                       finally=parallel::stopCluster(cl))
     likratio <- -2*(conlik-uclik)
     wmin <- min(likratio)
+    xoptr <- matrix(nrow=nadd+1,ncol=nd)
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(likratio,xi,d,g) else gpseplmms(likratio,xi,mtype,d,g)
-        py <- predict(gpobj,feasible)
+        pyfea <- predict(gpobj,feasible)
+        pygrid <- predict(gpobj,grid)
         delete(gpobj)
-        info <- mininfo(py,wmin)
+        lwhat <- pygrid$mean
+        xoptr[i,] <- grid[which.min(lwhat),]
+        info <- mininfo(pyfea,wmin)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
-        newy <- fearesp[,newidx]
+        newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,,drop=FALSE]
@@ -100,43 +126,7 @@ lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         likratio <- c(likratio,newlikratio)
     }
     xopt <- lrinv(xi,yi,yobs,timepoints,grid,mtype,d=d,g=g,gl=gl)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
-    return(ret)
-}
-histMatchset <- function(xi,yi,yobs,timepoints,cutoff,budget,nfea,
-                         feasible, fearesp, mtype=c("zmean","cmean","lmean"),
-                         d=NULL,g=0.001,nthread=4)
-{
-    mtype <- match.arg(mtype)
-    featype <- match.arg(featype)
-    lhsname <- paste(featype,"LHS",sep="")
-    lhsgen <- get(lhsname)
-    xi <- as.matrix(xi)
-    din <- ncol(xi)
-    ndes <- nrow(xi)
-    sig2hat <- ssanova(yobs~timepoints,type="cubic",method="v")$varht
-    nrem <- budget-ndes
-    iteradd <- NULL
-    while(nrem > 0)
-    {
-        impval <- maximp(yi,xi,yobs,feasible,mtype,sig2hat,d,g,nthread)
-        nnonimp <- sum(impval<cutoff)
-        if(nnonimp <= 0) break
-        nadd <- min(nnonimp,nrem)
-        sidx <- order(impval)[1:nadd]
-        newx <- feasible[sidx,,drop=FALSE]
-        newy <- fearesp[,sidx,drop=FALSE]
-        feasible <- feasible[-sidx,,drop=FALSE]
-        fearesp <- fearesp[,-sidx,drop=FALSE]
-        iteradd <- c(iteradd,nadd)
-        xi <- rbind(xi,newx)
-        yi <- cbind(yi,newy)
-        nrem <- nrem-nadd
-    }
-    devs <- sqrt(apply((yobs-yi)^2,2,sum))
-    optidx <- which.min(devs)
-    xopt <- xi[optidx,]
-    yopt <- yi[,optidx]
-    ret <- list(xx=xi,yy=yi,iteradd=iteradd,xopt=xopt,yopt=yopt)
+    xoptr[nadd+1,] <- xopt
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
     return(ret)
 }

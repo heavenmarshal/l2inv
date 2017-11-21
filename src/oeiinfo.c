@@ -202,10 +202,6 @@ void oeiinfo(int n, int p, int L, double b, double barval,
   for(i = 0, j = 0; i < n; ++i, j+=p)
   {
     parOei ppar = {p, L, b, iomemu2[i], barval, upb[i], avec+j, mub2star+j};
-    /* stat = newtonsolver(0.5*upb[i], &oeidkappaSeq, &oeidkappa2, */
-    /* 			&oeidkappadd, (void*) &ppar, &tval, 100, 1E-8, 1E-8); */
-    /* if(stat != success) */
-    /* { */
     stat = nleqslv(0.0, &transoeidkappaSeq, &transoeidkappa2,
 		   (void*) &ppar, &tval, 100, 1E-8, 1E-8);
 #ifndef __DEBUG__
@@ -243,4 +239,98 @@ void oeiinfo_R(const int* n_, const int* p_, const int* L_,
   oeiinfo(*n_, *p_, *L_, *b_, *barval_,
 	  iomemu2_, upb_, avec_, mub2star_,
 	  mumk_, info_);
+}
+
+void illuoeiMultVarres(int n, int p, int L, const double* b, double barval,
+		       const double* iomemu2, const double* upb,
+		       const double* avec, const double* mub2star,
+		       const double* mumk, double *info, double* spoints,
+		       double *lambda3, double *wval, double *qval, double *dk2val)
+{
+  double tval, kp, dk2, dk3, sgnt;
+  double zz, lambda, ww;
+  int i, j, stat;
+  for(i = 0, j = 0; i < n; ++i, j+=p)
+  {
+    parOei ppar = {p, L, b[i], iomemu2[i], barval, upb[i], avec+j, mub2star+j};
+    stat = nleqslv(0.0, &transoeidkappaSeq, &transoeidkappa2,
+		   (void*) &ppar, &tval, 100, 1E-8, 1E-8);
+    if(stat != success)
+    {
+      info[i] = NAN;
+      continue;
+    }
+    tval = transfun(tval,upb[i]);
+    oeikappafs(tval, b[i], iomemu2[i], avec+j, mub2star+j,
+	       p, L, &kp, &dk2, &dk3);
+    sgnt = SGN(tval);
+    zz = tval * sqrt(dk2);
+    lambda = dk3/pow(dk2,1.5);
+    ww = sgnt * sqrt(2.0*barval*tval-2.0*kp);
+    info[i] = tval >0.0? posapprox(tval,zz,ww,dk2,lambda):
+      negapprox(tval,zz,ww,dk2,lambda,mumk[i]);
+    spoints[i] = tval;
+    lambda3[i] = lambda;
+    wval[i] = ww;
+    qval[i] = zz;
+    dk2val[i] = dk2;
+  }
+}
+void illuoeiMultVarres_R(const int* n_, const int* p_, const int* L_,
+			 const double *b_, const double *barval_,
+			 const double *iomemu2_, const double *upb_,
+			 const double *avec_, const double *mub2star_,
+			 const double *mumk_, double *info_, double *spoints_,
+			 double *lambda3_, double *wval_, double *qval_, double *dk2val_)
+{
+  illuoeiMultVarres(*n_, *p_, *L_, b_, *barval_, iomemu2_,
+		    upb_, avec_, mub2star_, mumk_, info_,
+		    spoints_, lambda3_, wval_, qval_, dk2val_);
+}
+void illuoeiFixVarres(int n, int p, int L, double b, double barval,
+		      const double* iomemu2, const double* upb,
+		      const double* avec, const double* mub2star,
+		      const double* mumk, double *info, double* spoints,
+		      double *lambda3, double *wval, double *qval, double *dk2val)
+{
+  double tval, kp, dk2, dk3, sgnt;
+  double zz, lambda, ww;
+  int i, j, stat;
+  for(i = 0, j = 0; i < n; ++i, j+=p)
+  {
+    parOei ppar = {p, L, b, iomemu2[i], barval, upb[i], avec+j, mub2star+j};
+    stat = nleqslv(0.0, &transoeidkappaSeq, &transoeidkappa2,
+		   (void*) &ppar, &tval, 100, 1E-8, 1E-8);
+    if(stat != success)
+    {
+      info[i] = NAN;
+      continue;
+    }
+    tval = transfun(tval,upb[i]);
+    /* } */
+    oeikappafs(tval, b, iomemu2[i], avec+j, mub2star+j,
+	       p, L, &kp, &dk2, &dk3);
+    sgnt = SGN(tval);
+    zz = tval * sqrt(dk2);
+    lambda = dk3/pow(dk2,1.5);
+    ww = sgnt * sqrt(2.0*barval*tval-2.0*kp);
+    info[i] = tval >0.0? posapprox(tval,zz,ww,dk2,lambda):
+      negapprox(tval,zz,ww,dk2,lambda,mumk[i]);
+    spoints[i] = tval;
+    lambda3[i] = lambda;
+    wval[i] = ww;
+    qval[i] = zz;
+    dk2val[i] = dk2;
+  }
+}
+void illuoeiFixVarres_R(const int* n_, const int* p_, const int* L_,
+			const double *b_, const double *barval_,
+			const double *iomemu2_, const double *upb_,
+			const double *avec_, const double *mub2star_,
+			const double *mumk_, double *info_, double *spoints_,
+			double *lambda3_, double *wval_, double *qval_, double *dk2val_)
+{
+  illuoeiFixVarres(*n_, *p_, *L_, *b_, *barval_, iomemu2_,
+		   upb_, avec_, mub2star_, mumk_, info_,
+		   spoints_, lambda3_, wval_, qval_, dk2val_);
 }

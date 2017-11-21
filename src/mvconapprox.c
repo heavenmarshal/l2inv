@@ -2,8 +2,8 @@
 #include"newtonsolver.h"
 #include"mvconapprox.h"
 #include"nleqslv.h"
-
 #define SQRPI2 2.50662827463
+#define LOG6 1.79175946923
 #define SGN(x) ((double)((0.0<x)-(0.0>x)))
 
 double dkappaSeq(double x, void *param)
@@ -104,6 +104,7 @@ double transfun(double x, double upb)
 double dtransfun(double x)
 {
   double y = x>0? exp(-x): 1.0;
+  return y;
 }
 double transdkappaSeq(double x, void *param)
 {
@@ -205,26 +206,36 @@ double posapprox(double tval, double zz, double ww,
 		 double dk2, double lambda)
 {
   double zz2 = zz*zz;
-  double eww = exp(-0.5*ww*ww);
-  double pnzz = 1 - pnorm(zz,0.0,1.0,1,0);
-  double ezz = exp(0.5*zz2);
-  double sqrdk2 = sqrt(dk2);
-  double c1 = eww*(sqrdk2/SQRPI2-tval*dk2*ezz*pnzz);
-  double c2 = ezz*eww*sqrdk2*lambda/6.0*(pnzz*zz2*(zz2+3.0)-dnorm(zz,0.0,1.0,0)*zz*(zz2+2));
+  double ww2 = ww*ww;
+  double idx = 0.5*zz2-0.5*ww2;
+  double idxp1 = -0.5*ww2+0.5*log(dk2)-log(SQRPI2);
+  double pnzz = 1.0-pnorm(zz,0.0,1.0,1,0);
+  double idxp2 = idx + log(dk2) + log(pnzz);
+  double idxp3 = idx + 0.5*log(dk2);
+  double c1 = exp(idxp1)-tval*exp(idxp2);
+  double polp3 = pnzz*zz2*(zz2+3.0) - dnorm(zz,0.0,1.0,0)*zz*(zz2+2.0);
+  double sgnc2 = SGN(polp3)*SGN(lambda);
+  double idxc2 = idxp3 + log(fabs(lambda)) + log(fabs(polp3)) - LOG6;
+  double c2 = exp(idxc2)*sgnc2;
   return c1 + c2;
+  
 }
 
 double negapprox(double tval, double zz, double ww,
 		 double dk2, double lambda, double mumk)
 {
   double zz2 = zz*zz;
-  double eww = exp(-0.5*ww*ww);
-  double pzz = pnorm(zz, 0.0, 1.0, 1, 0);
-  double ezz = exp(0.5 * zz2);
-  double sqrdk2 = sqrt(dk2);
-  double c1 = mumk + eww*(sqrdk2/SQRPI2+tval*dk2*ezz*pzz);
-  double c2 = ezz*eww*sqrdk2*lambda/6.0*
-    (pzz*zz2*(zz2+3)+dnorm(zz,0.0,1.0,0)*zz*(zz2+2));
+  double ww2 = ww*ww;
+  double idx = 0.5*zz2 - 0.5*ww2;
+  double idxp1 = -0.5*ww2+0.5*log(dk2)-log(SQRPI2);
+  double pzz = pnorm(zz,0.0,1.0,1,0);
+  double idxp2 = idx + log(dk2) + log(pzz);
+  double idxp3 = idx + 0.5*log(dk2);
+  double c1 = exp(idxp1) + tval*exp(idxp2) + mumk;
+  double polp3 = pzz*zz2*(zz2+3.0)+dnorm(zz,0.0,1.0,0)*zz*(zz2+2.0);
+  double sgnc2 = SGN(polp3) * SGN(lambda);
+  double idxc2 = idxp3 + log(fabs(lambda))+log(fabs(polp3)) - LOG6;
+  double c2 = exp(idxc2)*sgnc2;
   return c1 - c2;
 }
 
@@ -238,14 +249,6 @@ void saddleapprox(const double* sig2m, const double *mu2m,
   for(i = 0, j = 0; i != n; ++i, j+=p)
   {
     parDkaps param = {p, sig2m+j, mu2m+j, barval[i], upb[i]};
-
-    /* stat = newtonsolver(0.5*upb[i], &dkappaSeq, &dkappa2, */
-    /* 			&dkappadd, (void*) &param, &tval, */
-    /* 			100, 1E-8, 1E-10); */
-
-    /* if(stat != success) */
-    /* { */
-      /* call more expensive solution */
     stat = nleqslv(0.0, &transdkappaSeq, &transdkappa2,
 		   (void*) &param, &tval, 100, 1E-8, 1E-8);
     if(stat != success)

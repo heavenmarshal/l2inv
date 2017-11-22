@@ -1,6 +1,7 @@
 l2invseqtrace <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
                           type=c("mvapp","mvei","projei","oei"),
-                          mtype=c("zmean","cmean","lmean"), frac=.95,d=NULL,g=0.001,
+                          mtype=c("zmean","cmean","lmean"),
+                          frac=.95,d=NULL,g=0.001,
                           valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)

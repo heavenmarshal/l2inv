@@ -1,6 +1,6 @@
 l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
                         alpha,type=c("mvapp","mvei","projei","oei"),
-                        mtype=c("zmean","cmean","lmean"),
+                        mtype=c("zmean","cmean","lmean"),thres=0,
                         frac=.95,d=NULL,g=0.001,valist=list(),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -13,6 +13,7 @@ l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         lbasis <- buildBasis(yi,frac)
@@ -22,6 +23,9 @@ l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         valist$barval <-  min(apply((yobs-yi)^2,2,sum))
         py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- fearesp[,newidx]
@@ -31,22 +35,26 @@ l2invseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         fearesp <- fearesp[,-newidx,drop=FALSE]
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,maxinfo=maxinfo)
     return(ret)
 }
 ojsinvseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
-                         mtype=c("zmean","cmean","lmean"),
+                         mtype=c("zmean","cmean","lmean"),thres=0,
                          d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)
         py <- predict(gpobj,feasible)
         delete(gpobj)
         info <- mininfo(py,wmin)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- fearesp[,newidx]
@@ -59,12 +67,12 @@ ojsinvseqset <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         lw <- c(lw,newlw)
     }
     xopt <- ojsinv(xi,yi,yobs,grid,mtype,d=d,g=g)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,maxinfo=maxinfo)
     return(ret)
 }
 lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                         fearesp,mtype=c("zmean","cmean","lmean"),
-                        d=NULL,g=0.001,gl=0.1,nthread=4)
+                        thres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -79,12 +87,16 @@ lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                       finally=parallel::stopCluster(cl))
     likratio <- -2*(conlik-uclik)
     wmin <- min(likratio)
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(likratio,xi,d,g) else gpseplmms(likratio,xi,mtype,d,g)
         py <- predict(gpobj,feasible)
         delete(gpobj)
         info <- mininfo(py,wmin)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- fearesp[,newidx]
@@ -100,7 +112,7 @@ lrinvseqset <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         likratio <- c(likratio,newlikratio)
     }
     xopt <- lrinv(xi,yi,yobs,timepoints,grid,mtype,d=d,g=g,gl=gl)
-    ret <- list(xx=xi,yy=yi,xopt=xopt)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,maxinfo=maxinfo)
     return(ret)
 }
 histMatchset <- function(xi,yi,yobs,timepoints,cutoff,budget,nfea,

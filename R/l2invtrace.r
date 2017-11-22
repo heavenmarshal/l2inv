@@ -1,7 +1,8 @@
 ## trace the update for the sequential design, for experiment not application.
 l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
-                       mtype=c("zmean","cmean","lmean"),frac=.95,d=NULL,g=0.001,
+                       mtype=c("zmean","cmean","lmean"),thres=0,
+                       frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -17,6 +18,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -30,12 +32,15 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         pyfea <- list(d2=py$d2, coeffs2=py$coeffs2[,1:nfea],coeff=py$coeff[,1:nfea],basis=py$basis,varres=py$varres)
         pygrid <- list(d2=py$d2, coeffs2=py$coeffs2[,-(1:nfea)],coeff=py$coeff[,-(1:nfea)])
         numbas <- lbasis$numbas
+        info <- infofun(pyfea,alpha,cht,valist)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(mm<thres) break
         if(numbas==1)
             criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
         else
             criter <- apply(pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2),2,sum)
         xoptr[i,] <- grid[which.min(criter),]
-        info <- infofun(pyfea,alpha,cht,valist)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
@@ -46,11 +51,11 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
     xoptr[nadd+1,] <- xopt
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                        func,...,d=NULL,g=0.001)
+                        func,...,thres=0,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
@@ -58,6 +63,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     wmin <- min(lw)
     nfea <- nrow(feasible)
     xoptr <- matrix(nrow=nadd+1,ncol=nd)
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -65,9 +71,12 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         py <- predict(gpobj,tfea)
         delete(gpobj)
         pyfea <- list(mean=py$mean[1:nfea], s2=py$s2[1:nfea])
+        info <- mininfo(pyfea,wmin)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(info<thres) break
         lwhat <- py$mean[-(1:nfea)]
         xoptr[i,] <- grid[which.min(lwhat),]
-        info <- mininfo(pyfea,wmin)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
@@ -81,12 +90,12 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     }
     xopt <- ojsinv(xi,yi,yobs,grid,mtype,d=d,g=g)
     xoptr[nadd+1,] <- xopt
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                      mtype=c("zmean","cmean","lmean"),
-                     func,...,d=NULL,g=0.001,gl=0.1,nthread=4)
+                     func,...,thres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -104,6 +113,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     wmin <- min(likratio)
     nfea <- nrow(feasible)
     xoptr <- matrix(nrow=nadd+1,ncol=nd)
+    maxinfo <- NULL
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -111,9 +121,12 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         py <- predict(gpobj,tfea)
         delete(gpobj)
         pyfea <- list(mean=py$mean[1:nfea],s2=py$s2[1:nfea])
+        info <- mininfo(pyfea,wmin)
+        mm <- max(info)
+        maxinfo <- c(maxinfo,mm)
+        if(mm<thres) break
         lrhat <- py$mean[-(1:nfea)]
         xoptr[i,] <- grid[which.min(lrhat),]
-        info <- mininfo(pyfea,wmin)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
@@ -130,6 +143,6 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     }
     xopt <- lrinv(xi,yi,yobs,timepoints,grid,mtype,d=d,g=g,gl=gl)
     xoptr[nadd+1,] <- xopt
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }

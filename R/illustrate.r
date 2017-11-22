@@ -29,7 +29,7 @@ approxinfo <- function(py,barval,d2,cxi)
               PACKAGE="l2inv")
     info <- out$ans-mumk
 }
-mcmvinfo <- function(py,yobs,nmc,barval,ompthread)
+mcmvinfo <- function(py,yobs,nmc,barval)
 {
     basis <- py$basis
     tlen <- nrow(basis)
@@ -42,7 +42,7 @@ mcmvinfo <- function(py,yobs,nmc,barval,ompthread)
     out <- .C("illumcei_R",as.double(py$coeff),as.double(coeffsd),
               as.double(basis), as.double(yobs), as.double(barval),
               as.double(sdhat), as.integer(nmc), as.integer(nfea),
-              as.integer(tlen), as.integer(numbas), as.integer(ompthread),
+              as.integer(tlen), as.integer(numbas),
               ans = double(nfea), PACKAGE="l2inv")
     return(out$ans)
 }
@@ -89,12 +89,13 @@ illuApproxEI <- function(design,resp,yobs,feasible,
 
 illuMCMVEI <- function(design,resp,yobs,feasible,nmc,frac=.95,
                        mtype=c("zmean","cmean","lmean"),
-                       d=NULL,g=0.001,ompthread=4)
+                       d=NULL,g=0.001)
 {
     py <- svdgpsepms(feasible,design,resp,frac,mtype=mtype,d=d,g=g)
     barval <- min(apply((resp-yobs)^2,2,sum))
-    info <- mcmvinfo(py,yobs,nmc,barval,ompthread)
-    return(info)
+    tm <- system.time(info <- mcmvinfo(py,yobs,nmc,barval))
+    ret <- list(info=info,time=tm[3])
+    return(ret)
 }
 illuApproxMVEI <- function(design,resp,yobs,feasible,frac=.95,
                            mtype=c("zmean","cmean","lmean"),
@@ -103,146 +104,7 @@ illuApproxMVEI <- function(design,resp,yobs,feasible,frac=.95,
     py <- svdgpsepms(feasible,design,resp,frac,mtype=mtype,d=d,g=g)
     barval <- min(apply((resp-yobs)^2,2,sum))
     valist <- list(yobs=yobs,barval=barval)
-    info <- oeiinfo(py,NULL,NULL,valist)
-    return(info)
-}
-
-illuoeiFixVarres <- function(coeff,coeffs2,varres,py,yobs,barval)
-{
-    d2 <- py$d2
-    p <- length(d2)
-    n <- ncol(coeff)
-    if(nrow(coeff) != p || nrow(coeffs2) != p || ncol(coeffs2) !=n)
-        stop("incorrect dimension of inputs!")
-    L <- length(yobs)
-    bz <- drop(t(py$basis)%*%yobs)
-    z2 <- drop(crossprod(yobs))
-    d2c <- coeff*d2
-    scalec <- apply(coeff*d2c,2,sum)
-    bzc <- apply(bz*coeff,2,sum)
-    scales2 <- d2*coeffs2
-    amat <- scales2+varres     #input
-    sand <- coeffs2/amat
-    sbz <- sand*bz
-    sd2c <- sand*d2c
-    sbz2 <- apply(sbz*bz,2,sum)
-    sd2c2 <- apply(sd2c*d2c,2,sum)
-    sbzd2c <- apply(sand*d2c*bz,2,sum)
-    iomemu2 <- z2+scalec-2*bzc
-    iomemu2 <- iomemu2-sbz2-sd2c2+2*sbzd2c
-    iomemu2 <- iomemu2/varres    #input
-    mubstar <- sbz-sd2c
-    mub2star <- (bz-d2c)*mubstar        #input
-    bound <- apply(amat,2,max)
-    bound <- 0.5/bound
-    mumk <- z2+scalec-2*bzc+apply(scales2,2,sum)+varres*L
-    mumk <- mumk - barval
-    ret <- .C("illuoeiFixVarres_R", as.integer(n), as.integer(p),
-              as.integer(L), as.double(varres),
-              as.double(barval),as.double(iomemu2),
-              as.double(bound), as.double(amat),
-              as.double(mub2star), as.double(mumk),
-              info = double(n), spoints = double(n),
-              lambda3 = double(n), wval = double(n),
-              qval = double(n), dk2val = double(n),
-              PACKAGE="l2inv")
-    info <- ret$info-mumk
-    out <- list(info=info,spoints=ret$spoints,lambda3=ret$lambda3,
-                wval=ret$wval,qval=ret$qval,dk2val=ret$dk2val,
-                mumk=mumk)
-    return(out)
-}
-
-illuoeiFixCoef <- function(coeff,coeffs2,varres,py,yobs,barval)
-{
-    d2 <- py$d2
-    p <- length(d2)
-    if(length(coeff) != p || length(coeffs2) != p)
-        stop("incorrect dimension of inputs!")
-    L <- length(yobs)
-    n <- length(varres)
-    bz <- drop(t(py$basis)%*%yobs)
-    z2 <- drop(crossprod(yobs))
-    d2c <- coeff*d2
-    scalec <- sum(coeff*d2c)## apply(coeff*d2c,2,sum)
-    bzc <- sum(bz*coeff) ## apply(bz*coeff,2,sum)
-    scales2 <- d2*coeffs2
-    amat <- outer(scales2,varres,"+")     #input p x n matrix
-    sand <- coeffs2/amat
-    sbz <- sand*bz
-    sd2c <- sand*d2c
-    sbz2 <- apply(sbz*bz,2,sum)
-    sd2c2 <- apply(sd2c*d2c,2,sum)
-    sbzd2c <- apply(sand*d2c*bz,2,sum)
-    iomemu2 <- z2+scalec-2*bzc
-    iomemu2 <- iomemu2-sbz2-sd2c2+2*sbzd2c
-    iomemu2 <- iomemu2/varres    #input length n vector
-    mubstar <- sbz-sd2c
-    mub2star <- (bz-d2c)*mubstar        #input p x n matrix
-    bound <- apply(amat,2,max)
-    bound <- 0.5/bound
-    mumk <- z2+scalec-2*bzc+sum(scales2)+varres*L
-    mumk <- mumk - barval
-    ret <- .C("illuoeiMultVarres_R", as.integer(n), as.integer(p),
-              as.integer(L), as.double(varres),
-              as.double(barval),as.double(iomemu2),
-              as.double(bound), as.double(amat),
-              as.double(mub2star), as.double(mumk),
-              info = double(n), spoints = double(n),
-              lambda3 = double(n), wval = double(n),
-              qval = double(n), dk2val = double(n),
-              PACKAGE="l2inv")
-    info <- ret$info-mumk
-    out <- list(info=info,spoints=ret$spoints,lambda3=ret$lambda3,
-                wval=ret$wval,qval=ret$qval,dk2val=ret$dk2val,
-                mumk=mumk)
-
-    return(out)
-}
-
-illuoei <- function(coeff,coeffs2,varres,py,yobs,barval)
-{
-    d2 <- py$d2
-    p <- length(d2)
-    n <- ncol(coeff)
-    if(nrow(coeff) != p || nrow(coeffs2) != p || ncol(coeffs2) !=n || length(varres) != n)
-        stop("incorrect dimension of inputs!")
-    L <- length(yobs)
-    bz <- drop(t(py$basis)%*%yobs)
-    z2 <- drop(crossprod(yobs))
-    d2c <- coeff*d2
-    scalec <- apply(coeff*d2c,2,sum)
-    bzc <- apply(bz*coeff,2,sum)
-    scales2 <- d2*coeffs2
-    amat <- t(t(scales2)+varres)     #input
-    sand <- coeffs2/amat
-    sbz <- sand*bz
-    sd2c <- sand*d2c
-    sbz2 <- apply(sbz*bz,2,sum)
-    sd2c2 <- apply(sd2c*d2c,2,sum)
-    sbzd2c <- apply(sand*d2c*bz,2,sum)
-    iomemu2 <- z2+scalec-2*bzc
-    iomemu2 <- iomemu2-sbz2-sd2c2+2*sbzd2c
-    iomemu2 <- iomemu2/varres    #input
-    mubstar <- sbz-sd2c
-    mub2star <- (bz-d2c)*mubstar        #input
-    bound <- apply(amat,2,max)
-    bound <- 0.5/bound
-    mumk <- z2+scalec-2*bzc+apply(scales2,2,sum)+varres*L
-    mumk <- mumk - barval
-    ret <- .C("illuoeiMultVarres_R", as.integer(n), as.integer(p),
-              as.integer(L), as.double(varres),
-              as.double(barval),as.double(iomemu2),
-              as.double(bound), as.double(amat),
-              as.double(mub2star), as.double(mumk),
-              info = double(n), spoints = double(n),
-              lambda3 = double(n), wval = double(n),
-              qval = double(n), dk2val = double(n),
-              PACKAGE="l2inv")
-    info <- ret$info-mumk
-    info <- ret$info-mumk
-    out <- list(info=info,spoints=ret$spoints,lambda3=ret$lambda3,
-                wval=ret$wval,qval=ret$qval,dk2val=ret$dk2val,
-                mumk=mumk)
-    return(out)
+    tm <- system.time(info <- oeiinfo(py,NULL,NULL,valist))
+    ret <- list(info=info,time=tm[3])
+    return(ret)
 }

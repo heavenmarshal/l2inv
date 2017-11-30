@@ -1,7 +1,7 @@
 ## trace the update for the sequential design, for experiment not application.
 l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
-                       mtype=c("zmean","cmean","lmean"),thres=0,
+                       mtype=c("zmean","cmean","lmean"),relthres=0,
                        frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
@@ -19,6 +19,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
     maxinfo <- NULL
+    thres <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -35,6 +36,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         info <- infofun(pyfea,alpha,cht,valist)
         mm <- max(info)
         maxinfo <- c(maxinfo,mm)
+        if(i == 1) thres <- relthres*mm
         if(mm<thres) break
         if(numbas==1)
             criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
@@ -55,7 +57,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                        func,...,thres=0,d=NULL,g=0.001)
+                        func,...,relthres=0,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
@@ -64,6 +66,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     nfea <- nrow(feasible)
     xoptr <- matrix(nrow=nadd+1,ncol=nd)
     maxinfo <- NULL
+    thres <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -74,6 +77,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         info <- mininfo(pyfea,wmin)
         mm <- max(info)
         maxinfo <- c(maxinfo,mm)
+        if(i == 1) thres <- relthres*mm
         if(info<thres) break
         lwhat <- py$mean[-(1:nfea)]
         xoptr[i,] <- grid[which.min(lwhat),]
@@ -95,7 +99,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                      mtype=c("zmean","cmean","lmean"),
-                     func,...,thres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
+                     func,...,relthres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -114,6 +118,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     nfea <- nrow(feasible)
     xoptr <- matrix(nrow=nadd+1,ncol=nd)
     maxinfo <- NULL
+    thres <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -124,6 +129,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         info <- mininfo(pyfea,wmin)
         mm <- max(info)
         maxinfo <- c(maxinfo,mm)
+        if(i == 1) thres <- relthres*mm
         if(mm<thres) break
         lrhat <- py$mean[-(1:nfea)]
         xoptr[i,] <- grid[which.min(lrhat),]

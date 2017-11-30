@@ -1,7 +1,7 @@
 l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
                      type=c("mvapp","mvei","projei","oei"),
                      mtype=c("zmean","cmean","lmean"),
-                     thres=0,frac=.95,d=NULL,g=0.001,
+                     relthres=0,frac=.95,d=NULL,g=0.001,
                      valist=list(),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -14,7 +14,8 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
-    maxinfo <- NULL
+    maxinfo <- rep(0,nadd)
+    thres <- 0
     for(i in 1:nadd)
     {
         lbasis <- buildBasis(yi,frac)
@@ -25,7 +26,8 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
         py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
         mm <- max(info)
-        maxinfo <- c(maxinfo,mm)
+        maxinfo[i] <- mm
+        if(i==1) thres <- mm*relthres
         if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]
@@ -39,12 +41,13 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
     return(ret)
 }
 ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                      func,...,thres=0,d=NULL,g=0.001)
+                      func,...,relthres=0,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
     maxinfo <- NULL
+    thres <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)
@@ -53,6 +56,7 @@ ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
         info <- mininfo(py,wmin)
         mm <- max(info)
         maxinfo <- c(maxinfo,mm)
+        if(i == 1) thres <- mm*relthres
         if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]
@@ -70,7 +74,7 @@ ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
 }
 lrinvseq <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                      mtype=c("zmean","cmean","lmean"),
-                     func,...,thres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
+                     func,...,relthres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -86,6 +90,7 @@ lrinvseq <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     likratio <- -2*(conlik-uclik)
     wmin <- min(likratio)
     maxinfo <- NULL
+    thres <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(likratio,xi,d,g) else gpseplmms(likratio,xi,mtype,d,g)
@@ -94,6 +99,7 @@ lrinvseq <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         info <- mininfo(py,wmin)
         mm <- max(info)
         maxinfo <- c(maxinfo,mm)
+        if(i == 1) thres <- relthres*mm
         if(mm<thres) break
         newidx <- which.max(info)
         newx <- feasible[newidx,]

@@ -34,7 +34,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         pygrid <- list(d2=py$d2, coeffs2=py$coeffs2[,-(1:nfea)],coeff=py$coeff[,-(1:nfea)])
         numbas <- lbasis$numbas
         info <- infofun(pyfea,alpha,cht,valist)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break
@@ -75,7 +75,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         delete(gpobj)
         pyfea <- list(mean=py$mean[1:nfea], s2=py$s2[1:nfea])
         info <- mininfo(pyfea,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(info<thres) break
@@ -127,7 +127,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         delete(gpobj)
         pyfea <- list(mean=py$mean[1:nfea],s2=py$s2[1:nfea])
         info <- mininfo(pyfea,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break

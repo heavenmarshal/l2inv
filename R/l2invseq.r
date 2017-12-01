@@ -25,7 +25,7 @@ l2invseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
         valist$barval <-  min(apply((yobs-yi)^2,2,sum))
         py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
         info <- infofun(py,alpha,cht,valist)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo[i] <- mm
         if(i==1) thres <- mm*relthres
         if(mm<thres) break
@@ -54,7 +54,7 @@ ojsinvseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
         py <- predict(gpobj,feasible)
         delete(gpobj)
         info <- mininfo(py,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- mm*relthres
         if(mm<thres) break
@@ -97,7 +97,7 @@ lrinvseq <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         py <- predict(gpobj,feasible)
         delete(gpobj)
         info <- mininfo(py,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break

@@ -30,7 +30,7 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         ## extract the part for feasible
         pyfea <- list(d2=py$d2, coeffs2=py$coeffs2[,1:nfea],coeff=py$coeff[,1:nfea],basis=py$basis,varres=py$varres)
         info <- infofun(pyfea,alpha,cht,valist)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break
@@ -72,7 +72,7 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,
         pyfea <- predict(gpobj,feasible)
         pygrid <- predict(gpobj,grid)
         info <- mininfo(pyfea,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         delete(gpobj)
         if(i == 1) thres <- relthres*mm
@@ -123,7 +123,7 @@ lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         pygrid <- predict(gpobj,grid)
         delete(gpobj)
         info <- mininfo(pyfea,wmin)
-        mm <- max(info)
+        mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break

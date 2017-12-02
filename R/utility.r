@@ -38,3 +38,5 @@ imputels <- function(yobs,lbasis,maxiter,tol)
     ret <- list(converge=converge,ysmooth=ysmooth,cht=cht)
     return(ret)
 }
+getcols <- function(idx,mat) mat[,idx]
+rename <- function(lst,name) {names(lst) <- name; return(lst)}

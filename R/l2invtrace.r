@@ -2,7 +2,7 @@
 l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
                        mtype=c("zmean","cmean","lmean"),relthres=0,
-                       frac=.95,d=NULL,g=0.001,
+                       earlystop=Inf,frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -13,25 +13,26 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     tlen <- length(yobs)
     infofun <- get(infoname)
     nfea <- nrow(feasible)
-    xoptr <- matrix(nrow=nadd+1,ncol=nd)
+    xoptr <- NULL
     valist.default <- list(nmc=500)
     remnames <- setdiff(names(valist.default),names(valist))
     valist <- c(valist,valist.default[remnames])
     valist$yobs <- yobs
     maxinfo <- NULL
     thres <- 0
+    nimpsteps <- -1
+    optdev <- Inf
     for(i in 1:nadd)
     {
-        tfea <- rbind(feasible,grid)
+        tfea <- list(feasible,grid)
         lbasis <- buildBasis(yi,frac)
         cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
         valist$chts2 <- drop(crossprod(yobs-lbasis$basis%*%cht))/tlen
         valist$mindist <- min(apply(lbasis$redd^2*(t(lbasis$coeff)-cht)^2,2,sum))
         valist$barval <-  min(apply((yobs-yi)^2,2,sum))
-        py <- svdgpsepms(tfea,xi,yi,frac,mtype=mtype,nthread=nthread)
-        ## extract the part for feasible
-        pyfea <- list(d2=py$d2, coeffs2=py$coeffs2[,1:nfea],coeff=py$coeff[,1:nfea],basis=py$basis,varres=py$varres)
-        pygrid <- list(d2=py$d2, coeffs2=py$coeffs2[,-(1:nfea)],coeff=py$coeff[,-(1:nfea)])
+        py <- svdgpsepmslist(tfea,xi,yi,frac,mtype=mtype,nthread=nthread)
+        pyfea <- py[[1]]
+        pygrid <- py[[2]]
         numbas <- lbasis$numbas
         info <- infofun(pyfea,alpha,cht,valist)
         mm <- max(info,na.rm=TRUE)
@@ -42,31 +43,44 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
             criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
         else
             criter <- apply(pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2),2,sum)
-        xoptr[i,] <- grid[which.min(criter),]
+        cxopt <- grid[which.min(criter),]
+        xoptr <- rbind(xoptr,cxopt)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
+        ## decide if early stop should be applied
+        cdev <- sum((yobs-func(cxopt,...))^2)
+        if(cdev < optdev)
+        {
+            optdev <- cdev
+            nimpsteps <- -1
+        }
+        nimpsteps <- nimpsteps+1
+        if(nimpsteps>=earlystop) break
+
         feasible <- feasible[-newidx,,drop=FALSE]
         nfea <- nfea-1
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
-    xoptr[nadd+1,] <- xopt
+    xoptr <- rbind(xoptr,xopt)
     ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                        func,...,relthres=0,d=NULL,g=0.001)
+                        func,...,relthres=0,earlystop=Inf,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
     nfea <- nrow(feasible)
-    xoptr <- matrix(nrow=nadd+1,ncol=nd)
+    xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
+    nimpsteps <- -1
+    optdev <- Inf
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -80,12 +94,22 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         if(i == 1) thres <- relthres*mm
         if(info<thres) break
         lwhat <- py$mean[-(1:nfea)]
-        xoptr[i,] <- grid[which.min(lwhat),]
+        copt <- grid[which.min(lwhat),]
+        xoptr <- rbind(xoptr,copt)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
+        cdev <- sum((yobs-func(cxopt,...))^2)
+        if(cdev < optdev)
+        {
+            optdev <- cdev
+            nimpsteps <- -1
+        }
+        nimpsteps <- nimpsteps+1
+        if(nimpsteps>=earlystop) break
+
         feasible <- feasible[-newidx,,drop=FALSE]
         newlw <- sqrt(sum((newy-yobs)^2))
         wmin <- min(wmin,newlw)
@@ -93,13 +117,14 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         nfea <- nfea-1
     }
     xopt <- ojsinv(xi,yi,yobs,grid,mtype,d=d,g=g)
-    xoptr[nadd+1,] <- xopt
+    xoptr <- rbind(xoptr,xopt)
     ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
-                     mtype=c("zmean","cmean","lmean"),
-                     func,...,relthres=0,d=NULL,g=0.001,gl=0.1,nthread=4)
+                       mtype=c("zmean","cmean","lmean"),
+                       func,...,relthres=0,earlystop=Inf,d=NULL,g=0.001,
+                       gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -116,9 +141,11 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     likratio <- -2*(conlik-uclik)
     wmin <- min(likratio)
     nfea <- nrow(feasible)
-    xoptr <- matrix(nrow=nadd+1,ncol=nd)
+    xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
+    nimpsteps <- -1
+    optdev <- Inf
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -132,12 +159,22 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break
         lrhat <- py$mean[-(1:nfea)]
-        xoptr[i,] <- grid[which.min(lrhat),]
+        copt <- grid[which.min(lrhat),]
+        xoptr <- rbind(xoptr,copt)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
+        cdev <- sum((yobs-func(cxopt,...))^2)
+        if(cdev < optdev)
+        {
+            optdev <- cdev
+            nimpsteps <- -1
+        }
+        nimpsteps <- nimpsteps+1
+        if(nimpsteps>=earlystop) break
+
         feasible <- feasible[-newidx,,drop=FALSE]
         newdelta <- newy-yobs
         newuclik <- evallik(newdelta,tinput,mtype,d,gl)
@@ -148,7 +185,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         nfea <- nfea-1
     }
     xopt <- lrinv(xi,yi,yobs,timepoints,grid,mtype,d=d,g=g,gl=gl)
-    xoptr[nadd+1,] <- xopt
+    xoptr <- rbind(xoptr,xopt)
     ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
     return(ret)
 }

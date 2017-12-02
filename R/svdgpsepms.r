@@ -87,3 +87,27 @@ svdgpsepms <- function(X0,design,resp,frac=.95,nstart=5,mtype=c("zmean","cmean",
                 basis=lbasis$basis,varres=varres)
     return(ret)
 }
+## a list of prediction sets do the dirty work
+svdgpsepmslist <- function(testlist,design,resp,frac=.95,nstart=5,
+                           mtype=c("zmean","cmean","lmean"),d=NULL,
+                           g=0.001,nthread=4)
+{
+    testlist <- as.matrix(testlist)
+    ntest <- sapply(testlist,nrow)
+    etest <- cumsum(ntest)
+    stest <- c(0,ntest[1:(length(ntest)-1)])+1
+    idxlist <- mapply(seq,stest,etest,SIMPLIFY=FALSE)
+
+    X0 <- do.call(rbind,testlist)
+    ret <- svdgpsepms(X0,design,resp,frac,nstart,mtype,d,g,nthread)
+    meanlist <- lapply(idxlist,getcols,ret$mean)
+    sdlist <- lapply(idxlist,getcols,ret$sd)
+    coefflist <- lapply(idxlist,getcols,ret$coeff)
+    coeffs2list <- lapply(idxlist,getcols,ret$coeffs2)
+    commonlist <- list(ret$d2,ret$basis,ret$varres)
+    retlist <- mapply(list,meanlist,sdlist,coefflist,coeffs2list,
+                      SIMPLIFY=FALSE)
+    retlist <- lapply(retlist,c,commonlist)
+    retlist <- lapply(retlist,rename,names(ret))
+    return(retlist)
+}

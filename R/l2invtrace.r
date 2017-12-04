@@ -2,7 +2,7 @@
 l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
                        mtype=c("zmean","cmean","lmean"),relthres=0,
-                       earlystop=Inf,frac=.95,d=NULL,g=0.001,
+                       earlystop=Inf,difthres=0,difstep=1,frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -22,6 +22,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     thres <- 0
     nimpsteps <- -1
     optdev <- Inf
+    difqueue <- initQueue(difstep)
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -39,6 +40,10 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break
+        difratio <- evalRatio(difqueue,mm)
+        if(isFull(difqueue) && difratio < difthres) break
+        difqueue <- enQueue(difqueue,mm)
+
         if(numbas==1)
             criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
         else
@@ -69,7 +74,8 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                        func,...,relthres=0,earlystop=Inf,d=NULL,g=0.001)
+                        func,...,relthres=0,earlystop=Inf,difthres=0,difstep=1,
+                        d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
@@ -81,6 +87,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     thres <- 0
     nimpsteps <- -1
     optdev <- Inf
+    difqueue <- initQueue(difstep)
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -92,10 +99,14 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
-        if(info<thres) break
+        if(mm<thres) break
+        difratio <- evalRatio(difqueue,mm)
+        if(isFull(difqueue) && difratio<difthres) break
+        difqueue <- enQueue(difqueue,mm)
+
         lwhat <- py$mean[-(1:nfea)]
-        copt <- grid[which.min(lwhat),]
-        xoptr <- rbind(xoptr,copt)
+        cxopt <- grid[which.min(lwhat),]
+        xoptr <- rbind(xoptr,cxopt)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)
@@ -123,8 +134,8 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                        mtype=c("zmean","cmean","lmean"),
-                       func,...,relthres=0,earlystop=Inf,d=NULL,g=0.001,
-                       gl=0.1,nthread=4)
+                       func,...,relthres=0,earlystop=Inf,difthres=0,
+                       difstep=1,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -146,6 +157,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     thres <- 0
     nimpsteps <- -1
     optdev <- Inf
+    difqueue <- initQueue(difstep)
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -158,9 +170,13 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
         if(mm<thres) break
+        difratio <- evalRatio(difqueue,mm)
+        if(isFull(difqueue) && diffratio<difthres) break
+        difqueue <- enQueue(difqueue,mm)
+
         lrhat <- py$mean[-(1:nfea)]
-        copt <- grid[which.min(lrhat),]
-        xoptr <- rbind(xoptr,copt)
+        cxopt <- grid[which.min(lrhat),]
+        xoptr <- rbind(xoptr,cxopt)
         newidx <- which.max(info)
         newx <- feasible[newidx,]
         newy <- func(newx,...)

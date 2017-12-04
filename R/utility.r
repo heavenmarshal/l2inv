@@ -40,3 +40,52 @@ imputels <- function(yobs,lbasis,maxiter,tol)
 }
 getcols <- function(idx,mat) mat[,idx]
 rename <- function(lst,name) {names(lst) <- name; return(lst)}
+
+## a queue for diff stopping criterion
+
+initQueue <- function(capacity)
+{
+    if(capacity<=0) error("capacity of a queue must be positive!")
+    qv <- rep(NA,capacity)
+    queue <- list(qv=qv,capacity=capacity,length=0)
+    return(queue)
+}
+isFull <- function(queue)
+{
+    return(queue$capacity==queue$length)
+}
+## if is full automatically discard the end item
+enQueue <- function(queue,x)
+{
+    if(queue$length==0 || queue$capacity==1)
+    {
+        queue$qv[1]=x
+        queue$length=1
+        return(queue)
+    }
+    qv <- queue$qv
+    if(isFull(queue))
+    {
+        shiftidx <- 1:(queue$capacity-1)
+        qv[shiftidx+1] <- qv[shiftidx]
+        qv[1] <- x
+        queue$qv <- qv
+        return(queue)
+    }
+    len <- queue$length
+    qv[2:(len+1)] <- qv[1:len]
+    qv[1] <- x
+    queue$qv <- qv
+    queue$length <- len+1
+    return(queue)
+}
+evalRatio <- function(queue,newx)
+{
+    if(queue$length==0) return(Inf)
+    qv <- queue$qv
+    denominator <- sum(abs(qv),na.rm=TRUE)
+    extqv <- c(newx,qv)
+    difeqv <- abs(diff(extqv))
+    numerator <- sum(difeqv,na.rm=TRUE)
+    return(numerator/denominator)
+}

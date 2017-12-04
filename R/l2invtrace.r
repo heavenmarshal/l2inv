@@ -23,6 +23,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     nimpsteps <- -1
     optdev <- Inf
     difqueue <- initQueue(difstep)
+    stopflag <- 0
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -39,9 +40,17 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
-        if(mm<thres) break
+        if(mm<thres)
+        {
+            stopflag <- 1
+            break
+        }
         difratio <- evalRatio(difqueue,mm)
-        if(isFull(difqueue) && difratio < difthres) break
+        if(isFull(difqueue) && difratio < difthres)
+        {
+            stopflag <- 2
+            break
+        }
         difqueue <- enQueue(difqueue,mm)
 
         if(numbas==1)
@@ -63,14 +72,18 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
             nimpsteps <- -1
         }
         nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop) break
+        if(nimpsteps>=earlystop)
+        {
+            stopflag <- 3
+            break
+        }
 
         feasible <- feasible[-newidx,,drop=FALSE]
         nfea <- nfea-1
     }
     xopt <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
     xoptr <- rbind(xoptr,xopt)
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo,stopflag=stopflag)
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
@@ -88,6 +101,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     nimpsteps <- -1
     optdev <- Inf
     difqueue <- initQueue(difstep)
+    stopflag <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -99,9 +113,17 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
-        if(mm<thres) break
+        if(mm<thres)
+        {
+            stopflag <- 1
+            break
+        }
         difratio <- evalRatio(difqueue,mm)
-        if(isFull(difqueue) && difratio<difthres) break
+        if(isFull(difqueue) && difratio<difthres)
+        {
+            stopflag <- 2
+            break
+        }
         difqueue <- enQueue(difqueue,mm)
 
         lwhat <- py$mean[-(1:nfea)]
@@ -119,8 +141,11 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
             nimpsteps <- -1
         }
         nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop) break
-
+        if(nimpsteps>=earlystop)
+        {
+            stopflag <- 3
+            break
+        }
         feasible <- feasible[-newidx,,drop=FALSE]
         newlw <- sqrt(sum((newy-yobs)^2))
         wmin <- min(wmin,newlw)
@@ -129,7 +154,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     }
     xopt <- ojsinv(xi,yi,yobs,grid,mtype,d=d,g=g)
     xoptr <- rbind(xoptr,xopt)
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo,stopflag=stopflag)
     return(ret)
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
@@ -158,6 +183,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     nimpsteps <- -1
     optdev <- Inf
     difqueue <- initQueue(difstep)
+    stopflag <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -169,9 +195,17 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         mm <- max(info,na.rm=TRUE)
         maxinfo <- c(maxinfo,mm)
         if(i == 1) thres <- relthres*mm
-        if(mm<thres) break
+        if(mm<thres)
+        {
+            stopflag <- 1
+            break
+        }
         difratio <- evalRatio(difqueue,mm)
-        if(isFull(difqueue) && diffratio<difthres) break
+        if(isFull(difqueue) && diffratio<difthres)
+        {
+            stopflag <- 2
+            break
+        }
         difqueue <- enQueue(difqueue,mm)
 
         lrhat <- py$mean[-(1:nfea)]
@@ -189,8 +223,11 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
             nimpsteps <- -1
         }
         nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop) break
-
+        if(nimpsteps>=earlystop)
+        {
+            stopflag <- 3
+            break
+        }
         feasible <- feasible[-newidx,,drop=FALSE]
         newdelta <- newy-yobs
         newuclik <- evallik(newdelta,tinput,mtype,d,gl)
@@ -202,6 +239,6 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     }
     xopt <- lrinv(xi,yi,yobs,timepoints,grid,mtype,d=d,g=g,gl=gl)
     xoptr <- rbind(xoptr,xopt)
-    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,xoptr=xoptr,maxinfo=maxinfo,stopflag=stopflag)
     return(ret)
 }

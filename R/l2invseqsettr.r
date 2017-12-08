@@ -1,7 +1,8 @@
 l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
                           alpha,type=c("mvapp","mvei","projei","oei"),
                           mtype=c("zmean","cmean","lmean"),relthres=0,
-                          earlystop=Inf,difthres=0,difstep=1,frac=.95,d=NULL,g=0.001,
+                          difthres=0,difstep=1,dxithres=0,dxistep=1,
+                          frac=.95,d=NULL,g=0.001,
                           valist=list(),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -19,10 +20,10 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
     valist$yobs <- yobs
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
     stopflag <- 0
+    val <- var(yobs)*(tlen-1)
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -64,18 +65,15 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
         newy <- fearesp[,newidx]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
+        dxiqueue <- enQueue(dxiqueue,cdev)
+
         feasible <- feasible[-newidx,,drop=FALSE]
         fearesp <- fearesp[,-newidx,drop=FALSE]
         nfea <- nfea-1
@@ -87,7 +85,8 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
 }
 ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
                            mtype=c("zmean","cmean","lmean"),relthres=0,
-                           earlystop=Inf,difthres=0,difstep=1,d=NULL,g=0.001)
+                           difthres=0,difstep=1,dxithres=0,dxistep=1,
+                           d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
@@ -96,10 +95,10 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
     xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
     stopflag <- 0
+    val <- var(yobs)*(tlen-1)
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)
@@ -131,18 +130,14 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
         newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
+        dxiqueue <- enQueue(dxiqueue,cdev)
         feasible <- feasible[-newidx,,drop=FALSE]
         fearesp <- fearesp[,-newidx,drop=FALSE]
         newlw <- sqrt(sum((newy-yobs)^2))
@@ -156,7 +151,7 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
 }
 lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                           fearesp,gridresp,mtype=c("zmean","cmean","lmean"),
-                          relthres=0,earlystop=Inf,difthres=0,difstep=1,
+                          relthres=0,difthres=0,difstep=1,dxithres=0,dxistep=1,
                           d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
@@ -176,10 +171,10 @@ lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
     stopflag <- 0
+    val <- var(yobs)*(tlen-1)
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(likratio,xi,d,g) else gpseplmms(likratio,xi,mtype,d,g)
@@ -211,18 +206,15 @@ lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
+        dxiqueue <- enQueue(dxiqueue,cdev)
+
         feasible <- feasible[-newidx,,drop=FALSE]
         fearesp <- fearesp[,-newidx,drop=FALSE]
         newdelta <- newy-yobs

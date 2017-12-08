@@ -2,7 +2,8 @@
 l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
                        mtype=c("zmean","cmean","lmean"),relthres=0,
-                       earlystop=Inf,difthres=0,difstep=1,frac=.95,d=NULL,g=0.001,
+                       difthres=0,difstep=1,dxithres=0,dxistep=1,
+                       frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -20,10 +21,10 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     valist$yobs <- yobs
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
     stopflag <- 0
+    val <- var(yobs)*(tlen-1)
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -52,7 +53,6 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
             break
         }
         difqueue <- enQueue(difqueue,mm)
-
         if(numbas==1)
             criter <- pygrid$d2*(pygrid$coeffs2+(pygrid$coeff-cht)^2)
         else
@@ -65,19 +65,14 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
         ## decide if early stop should be applied
-        cdev <- sum((yobs-func(cxopt,...))^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
-
+        dxiqueue <- enQueue(dxiqueue,cdev)
         feasible <- feasible[-newidx,,drop=FALSE]
         nfea <- nfea-1
     }
@@ -87,20 +82,21 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     return(ret)
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
-                        func,...,relthres=0,earlystop=Inf,difthres=0,difstep=1,
+                        func,...,relthres=0,difthres=0,difstep=1,dxithres=0,dxistep=1,
                         d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
+    tlen <- length(yobs)
     wmin <- min(lw)
     nfea <- nrow(feasible)
     xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
+    val <- var(yobs)*(tlen-1)
     stopflag <- 0
     for(i in 1:nadd)
     {
@@ -134,18 +130,15 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-func(cxopt,...))^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
+        dxiqueue <- enQueue(dxiqueue,cdev)
+
         feasible <- feasible[-newidx,,drop=FALSE]
         newlw <- sqrt(sum((newy-yobs)^2))
         wmin <- min(wmin,newlw)
@@ -159,8 +152,8 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                        mtype=c("zmean","cmean","lmean"),
-                       func,...,relthres=0,earlystop=Inf,difthres=0,
-                       difstep=1,d=NULL,g=0.001,gl=0.1,nthread=4)
+                       func,...,relthres=0,difthres=0, difstep=1,
+                       dxithres=0, dxistep=1,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -180,9 +173,9 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     xoptr <- NULL
     maxinfo <- NULL
     thres <- 0
-    nimpsteps <- -1
-    optdev <- Inf
     difqueue <- initQueue(difstep)
+    dxiqueue <- initQueue(dxistep)
+    val <- var(yobs)*(tlen-1)
     stopflag <- 0
     for(i in 1:nadd)
     {
@@ -216,18 +209,15 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-func(cxopt,...))^2)
-        if(cdev < optdev)
-        {
-            optdev <- cdev
-            nimpsteps <- -1
-        }
-        nimpsteps <- nimpsteps+1
-        if(nimpsteps>=earlystop)
+        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        dxiratio <- evalRatio(dxiqueue,cdev)
+        if(isFull(dxiqueue) && dxiratio < dxithres)
         {
             stopflag <- 3
             break
         }
+        dxiqueue <- enQueue(dxiqueue,cdev)
+
         feasible <- feasible[-newidx,,drop=FALSE]
         newdelta <- newy-yobs
         newuclik <- evallik(newdelta,tinput,mtype,d,gl)

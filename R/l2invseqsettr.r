@@ -1,7 +1,7 @@
 l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
                           alpha,type=c("mvapp","mvei","projei","oei"),
                           mtype=c("zmean","cmean","lmean"),relthres=0,
-                          difthres=0,difstep=1,dxithres=0,dxistep=1,
+                          difthres=0,difstep=1,dxithres=0,dxistep=1,dxihittime=1,
                           frac=.95,d=NULL,g=0.001,
                           valist=list(),nthread=4)
 {
@@ -24,6 +24,7 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
     dxiqueue <- initQueue(dxistep)
     stopflag <- 0
     val <- var(yobs)*(tlen-1)
+    hitcount <- 0
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -65,9 +66,11 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
         newy <- fearesp[,newidx]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        cdev <- log(sum((yobs-gridresp[,coptidx])^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount+1
+        if(hitcount>dxihittime)
         {
             stopflag <- 3
             break
@@ -85,7 +88,7 @@ l2invseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
 }
 ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
                            mtype=c("zmean","cmean","lmean"),relthres=0,
-                           difthres=0,difstep=1,dxithres=0,dxistep=1,
+                           difthres=0,difstep=1,dxithres=0,dxistep=1,dxihittime=1,
                            d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
@@ -99,6 +102,7 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
     dxiqueue <- initQueue(dxistep)
     stopflag <- 0
     val <- var(yobs)*(tlen-1)
+    hitcount <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)
@@ -130,9 +134,11 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
         newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        cdev <- log(sum((yobs-gridresp[,coptidx])^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount+1
+        if(hitcount >= dxihittime)
         {
             stopflag <- 3
             break
@@ -152,7 +158,7 @@ ojsinvseqsettr <- function(xi,yi,yobs,nadd,feasible,grid,fearesp,gridresp,
 lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                           fearesp,gridresp,mtype=c("zmean","cmean","lmean"),
                           relthres=0,difthres=0,difstep=1,dxithres=0,dxistep=1,
-                          d=NULL,g=0.001,gl=0.1,nthread=4)
+                          dxihittime=1, d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
     tlen <- length(yobs)
@@ -175,6 +181,7 @@ lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     dxiqueue <- initQueue(dxistep)
     stopflag <- 0
     val <- var(yobs)*(tlen-1)
+    hitcount <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(likratio,xi,d,g) else gpseplmms(likratio,xi,mtype,d,g)
@@ -206,15 +213,16 @@ lrinvseqsettr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         newy <- fearesp[,newidx,drop=FALSE]
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-gridresp[,coptidx])^2)/val
+        cdev <- log(sum((yobs-gridresp[,coptidx])^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount + 1
+        if(hitcount >= dxihittime)
         {
             stopflag <- 3
             break
         }
         dxiqueue <- enQueue(dxiqueue,cdev)
-
         feasible <- feasible[-newidx,,drop=FALSE]
         fearesp <- fearesp[,-newidx,drop=FALSE]
         newdelta <- newy-yobs

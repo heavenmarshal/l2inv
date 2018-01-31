@@ -3,7 +3,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
                        func,...,type=c("mvapp","mvei","projei","oei"),
                        mtype=c("zmean","cmean","lmean"),relthres=0,
                        difthres=0,difstep=1,dxithres=0,dxistep=1,
-                       frac=.95,d=NULL,g=0.001,
+                       dxihittime=1, frac=.95,d=NULL,g=0.001,
                        valist=list(nmc=500),nthread=4)
 {
     xi <- as.matrix(xi)
@@ -25,6 +25,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
     dxiqueue <- initQueue(dxistep)
     stopflag <- 0
     val <- var(yobs)*(tlen-1)
+    hitcount <- 0
     for(i in 1:nadd)
     {
         tfea <- list(feasible,grid)
@@ -65,9 +66,11 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
         ## decide if early stop should be applied
-        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        cdev <- log(sum((yobs-func(cxopt,...))^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount+1
+        if(hitcount >= dxihittime)
         {
             stopflag <- 3
             break
@@ -83,7 +86,7 @@ l2invseqtr <- function(xi,yi,yobs,nadd,feasible,grid,alpha,
 }
 ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lmean"),
                         func,...,relthres=0,difthres=0,difstep=1,dxithres=0,dxistep=1,
-                        d=NULL,g=0.001)
+                        dxihittime=1,d=NULL,g=0.001)
 {
     xi <- as.matrix(xi)
     nd <- ncol(xi)
@@ -98,6 +101,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
     dxiqueue <- initQueue(dxistep)
     val <- var(yobs)*(tlen-1)
     stopflag <- 0
+    hitcount <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -130,9 +134,11 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        cdev <- log(sum((yobs-func(cxopt,...))^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount+1
+        if(hitcount >= dxihittime)
         {
             stopflag <- 3
             break
@@ -152,7 +158,7 @@ ojsinvseqtr <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","l
 }
 lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
                        mtype=c("zmean","cmean","lmean"),
-                       func,...,relthres=0,difthres=0, difstep=1,
+                       func,...,relthres=0,difthres=0, difstep=1,dxihittime=1,
                        dxithres=0, dxistep=1,d=NULL,g=0.001,gl=0.1,nthread=4)
 {
     mtype <- match.arg(mtype)
@@ -177,6 +183,7 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
     dxiqueue <- initQueue(dxistep)
     val <- var(yobs)*(tlen-1)
     stopflag <- 0
+    hitcount <- 0
     for(i in 1:nadd)
     {
         tfea <- rbind(feasible,grid)
@@ -209,9 +216,11 @@ lrinvseqtr <- function(xi,yi,yobs,timepoints,nadd,feasible,grid,
         newy <- func(newx,...)
         xi <- rbind(xi,newx)
         yi <- cbind(yi,newy)
-        cdev <- sum((yobs-func(cxopt,...))^2)/val
+        cdev <- log(sum((yobs-func(cxopt,...))^2)/val)
         dxiratio <- evalRatio(dxiqueue,cdev)
         if(isFull(dxiqueue) && dxiratio < dxithres)
+            hitcount <- hitcount+1
+        if(hitcount >= dxihittime)
         {
             stopflag <- 3
             break

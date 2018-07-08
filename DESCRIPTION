@@ -3,5 +3,5 @@ Version: 1.0-1
 Date: 2017-08-09
 Author: Ru Zhang
 Depends: R (>= 2.14)
-Imports: parallel, lhs, gss
+Imports: parallel, lhs, gss, nleqslv
 NeedsCompilation: yes

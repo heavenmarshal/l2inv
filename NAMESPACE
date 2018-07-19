@@ -11,7 +11,8 @@ export(l2inv,ojsinv,lrinv,
        svdgpsepms,l2invseqsettr,
        ojsinvseqsettr,illuExactEI,
        illuApproxEI,illuMCMVEI,
-       illuApproxMVEI,oeiinfo)
+       illuApproxMVEI,oeiinfo,
+       l2invseqwithsp)
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)

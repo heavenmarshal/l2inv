@@ -29,6 +29,38 @@ l2inv <- function(design,resp,yobs,feasible,frac=.95,
     xopt <- feasible[which.min(criter),]
     return(xopt)
 }
+naiveinv <- function(design,resp,yobs,feasible,frac=.95,
+                     mtype=c("zmean","cmean","lmean"),
+                     maxiter=50,tol=1e-3,d=NULL,g=0.001)
+{
+    mtype <- match.arg(mtype)
+    design <- as.matrix(design)
+    lbasis <- buildBasis(resp,frac)
+    if(any(is.na(yobs)))
+    {
+        yimp <- imputels(yobs,lbasis,maxiter,tol)
+        cht <- yimp$cht
+    }
+    else
+        cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
+
+    numbas <- lbasis$numbas
+    coeff <- lbasis$coeff
+    reddsq <- lbasis$redd^2
+    nfea <- nrow(feasible)
+    criter <- rep(0,nfea)
+    for(i in 1:numbas)
+    {
+        ccoeff <- coeff[,i]
+        gpobj <- if(mtype=="zmean") gpsepms(ccoeff,design,d,g) else gpseplmms(ccoeff,design,mtype,d,g)
+        pred <- predict(gpobj,feasible)
+        delete(gpobj)
+        criter <- criter+reddsq[i]*(pred$mean-cht[i])^2
+    }
+    xopt <- feasible[which.min(criter),]
+    return(xopt)
+}
+
 ojsinv <- function(design,resp,yobs,feasible,mtype=c("zmean","cmean","lmean"),
                    q=.5,d=NULL,g=0.001)
 {

@@ -1,6 +1,6 @@
 useDynLib(l2inv)
 
-export(l2inv,ojsinv,lrinv,
+export(l2inv,naiveinv,ojsinv,lrinv,
        l2invseq,ojsinvseq,
        lrinvseq,histMatch,
        l2invseqtr,ojsinvseqtr,

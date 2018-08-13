@@ -14,7 +14,8 @@ export(l2inv,naiveinv,ojsinv,lrinv,
        illuApproxMVEI,oeiinfo,
        l2invseqwithsp,
        cmpnaiveesl2d,cmpnaiveesl2dopt,
-       l2invopt)
+       l2invopt,ojsinvopt,
+       l2invseqopt,ojsinvseqopt)
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)

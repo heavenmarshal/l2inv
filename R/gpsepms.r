@@ -27,7 +27,7 @@ gpsepms <- function(resp,design, d=NULL,g=0.001,nstarts=5)
         llik[i] <- llikGPsep(gpis[i],dab=d$ab,gab=g$ab)
     }
     optidx <- which.max(llik)
-    ret <- list(gpis=gpis,optidx=optidx)
+    ret <- list(gpis=gpis,optidx=optidx,optgpi=gpis[optidx])
     class(ret) <- "gpsepms"
     return(ret)
 }
@@ -77,7 +77,7 @@ gpseplmms <- function(resp,design,type=c("cmean","lmean"),
         llik[i] <- llikGPsepLm(gpis[i],dab=d$ab,gab=g$ab)
     }
     optidx <- which.max(llik)
-    ret <- list(gpis=gpis,optidx=optidx,type=type)
+    ret <- list(gpis=gpis,optidx=optidx,optgpi=gpis[optidx],type=type)
     class(ret) <- "gpseplmms"
     return(ret)
 }

@@ -1,7 +1,7 @@
-l2invopt <- function(design,resp,yobs,frac=.95,
-                     mtype=c("zmean","cmean","lmean"),
-                     critype=c("esl2d","naive"),
-                     d=NULL,g=0.001)
+esl2dinvoptR <- function(design,resp,yobs,frac=.95,
+                        mtype=c("zmean","cmean","lmean"),
+                        critype=c("esl2d","naive"),
+                        d=NULL,g=0.001)
 {
     ndim <- ncol(design)
     mtype <- match.arg(mtype)
@@ -28,9 +28,9 @@ l2invopt <- function(design,resp,yobs,frac=.95,
     return(xopt)
 }
 
-l2invoptC <- function(design,resp,yobs,frac=.95,
-                      mtype=c("zmean","cmean","lmean"),
-                      d=NULL,g=0.001,gactl=list())
+esl2dinvopt <- function(design,resp,yobs,frac=.95,
+                        mtype=c("zmean","cmean","lmean"),
+                        d=NULL,g=0.001,gactl=list())
 {
     ndim <- ncol(design)
     mtype <- match.arg(mtype)
@@ -63,7 +63,7 @@ l2invoptC <- function(design,resp,yobs,frac=.95,
     return(xopt)
 }
 
-ojsinvopt <- function(design,resp,yobs,mtype=c("zmean","cmean","lmean"),
+sl2invopt <- function(design,resp,yobs,mtype=c("zmean","cmean","lmean"),
                       q=.5,d=NULL,g=0.001,gactl=list())
 {
     ndim <- ncol(design)
@@ -78,7 +78,7 @@ ojsinvopt <- function(design,resp,yobs,mtype=c("zmean","cmean","lmean"),
     remnames <- setdiff(names(gactl.default),names(gactl))
     gactl <- c(gactl,gactl.default[remnames])
     gpobj <- if(mtype=="zmean") gpsepms(dev,design,d,g) else gpseplmms(dev,design,mtype,d,g)
-    opt <- genoud(ojsdev,ndim,pop.size=gactl$pop.size,
+    opt <- genoud(sl2dev,ndim,pop.size=gactl$pop.size,
                   max.generations=gactl$max.generations,
                   wait.generations=gactl$wait.generations,
                   Domains=cbind(rep(0,ndim),rep(1,ndim)),

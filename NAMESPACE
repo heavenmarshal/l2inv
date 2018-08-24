@@ -1,27 +1,16 @@
 useDynLib(l2inv)
-
-export(l2inv,naiveinv,ojsinv,lrinv,
-       l2invseq,ojsinvseq,
-       lrinvseq,histMatch,
-       l2invseqtr,ojsinvseqtr,
-       lrinvseqtr,l2invseqset,
-       ojsinvseqset,lrinvseqset,
-       histMatchset,l2invseqtrace,
-       ojsinvseqtrace,lrinvseqtrace,
-       svdgpsepms,l2invseqsettr,
-       ojsinvseqsettr,illuExactEI,
-       illuApproxEI,illuMCMVEI,
+export(esl2dinv,sl2inv,esl2dinvseq,sl2invseq,
+       esl2dinvopt,sl2invopt,esl2dinvseqopt,
+       sl2invseqopt,esl2dinvseqtr,sl2invseqtr,
+       esl2dinvseqopttr,sl2invseqopttr,
+       illuExactEI, illuApproxEI, illuMCMVEI,
        illuApproxMVEI,oeiinfo,
-       l2invseqwithsp,
        cmpnaiveesl2d,cmpnaiveesl2dopt,
-       l2invopt,ojsinvopt,
-       l2invseqopt,ojsinvseqopt,
-       l2invoptC,l2invseqopttr,
-       ojsinvseqopttr)
+       svdgpsepms
+       )
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)
 importFrom(lhs,maximinLHS)
 importFrom(lhs,randomLHS)
-importFrom(gss,ssanova)
 importFrom(rgenoud,genoud)

@@ -1,4 +1,2 @@
-NLEQ_FLAG = `echo 'library(nleqslv);pkgroot <- system.file(package="nleqslv",mustWork=TRUE);arch <- .Platform[["r_arch"]];if(arch!="") arch <- paste("/",arch,sep="");ext <- .Platform[["dynlib.ext"]];pkgroot <- paste(pkgroot,"/libs",sep="");pkgpath <- paste(pkgroot,arch,"/nleqslv",ext,sep="");cat(pkgpath)'\
-	  | "${R_HOME}/bin/R" --vanilla --slave`
-PKG_CFLAGS = -DRPRINT -I include -fopenmp  ## -UNDEBUG
-PKG_LIBS = ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS}  "${NLEQ_FLAG}"
+PKG_CFLAGS = -DRPRINT -I include  ## -UNDEBUG
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS)  $(FLIBS)

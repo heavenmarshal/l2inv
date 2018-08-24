@@ -1,8 +1,7 @@
 #include<Rmath.h>
-#include"newtonsolver.h"
 #include"oeiinfo.h"
-#include"mvconapprox.h"
 #include"nleqslv.h"
+#include"mvconapprox.h"
 
 #ifdef __DEBUG__
 #include<stdio.h>
@@ -333,43 +332,4 @@ void illuoeiFixVarres_R(const int* n_, const int* p_, const int* L_,
   illuoeiFixVarres(*n_, *p_, *L_, *b_, *barval_, iomemu2_,
 		   upb_, avec_, mub2star_, mumk_, info_,
 		   spoints_, lambda3_, wval_, qval_, dk2val_);
-}
-/* this function returns both the approximation and the saddlepoints  */
-void oeiinfowithsp(int n, int p, int L, double b, double barval,
-		   const double* iomemu2, const double* upb,
-		   const double* avec, const double* mub2star,
-		   const double* mumk, double *info,
-		   double *saddlepoints)
-{
-  double tval, kp, dk2, dk3, sgnt;
-  double zz, lambda, ww;
-  int i, j, stat;
-  for(i = 0, j = 0; i < n; ++i, j+=p)
-  {
-    parOei ppar = {p, L, b, iomemu2[i], barval, upb[i], avec+j, mub2star+j};
-    stat = nleqslv(0.0, &transoeidkappaSeq, &transoeidkappa2,
-		   (void*) &ppar, &tval, 100, 1E-8, 1E-8);
-    tval = transfun(tval,upb[i]);
-    saddlepoints[i] = tval;
-    oeikappafs(tval, b, iomemu2[i], avec+j, mub2star+j,
-	       p, L, &kp, &dk2, &dk3);
-    sgnt = SGN(tval);
-    zz = tval * sqrt(dk2);
-    lambda = dk3/pow(dk2,1.5);
-    ww = sgnt * sqrt(2.0*barval*tval-2.0*kp);
-    info[i] = tval >0.0? posapprox(tval,zz,ww,dk2,lambda):
-      negapprox(tval,zz,ww,dk2,lambda,mumk[i]);
-  }
-}
-
-void oeiinfowithsp_R(const int* n_, const int* p_, const int* L_,
-		     const double *b_, const double *barval_,
-		     const double *iomemu2_, const double *upb_,
-		     const double *avec_, const double *mub2star_,
-		     const double *mumk_, double *info_,
-		     double *saddlepoints_)
-{
-  oeiinfowithsp(*n_, *p_, *L_, *b_, *barval_,
-		iomemu2_, upb_, avec_, mub2star_,
-		mumk_, info_, saddlepoints_);
 }

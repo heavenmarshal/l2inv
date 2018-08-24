@@ -1,7 +1,16 @@
 #ifndef NLEQSLV_H
 #define NLEQSLV_H
 #include<R.h>
-#include"newtonsolver.h"
+typedef double (*targfun) (double, void*);
+typedef double (*targderv) (double, void*);
+typedef void (*targfunderv) (double, void*, double*, double*);
+
+enum Stat
+{
+  success,
+  failure,
+  exceed
+};
 void F77_NAME(liqsiz)(int *n, int *wrksiz);
 void F77_NAME(nwnleq)(double *x, int *n, double *scalex, int *maxit,
 		      int *jacflg, double *xtol, double *ftol, double *btol,

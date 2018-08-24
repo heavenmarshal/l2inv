@@ -1,5 +1,4 @@
 #include<Rmath.h>
-#include"newtonsolver.h"
 #include"mvconapprox.h"
 #include"nleqslv.h"
 #define SQRPI2 2.50662827463
@@ -218,7 +217,7 @@ double posapprox(double tval, double zz, double ww,
   double idxc2 = idxp3 + log(fabs(lambda)) + log(fabs(polp3)) - LOG6;
   double c2 = exp(idxc2)*sgnc2;
   return c1 + c2;
-  
+
 }
 
 double negapprox(double tval, double zz, double ww,

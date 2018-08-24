@@ -103,8 +103,7 @@ illuApproxMVEI <- function(design,resp,yobs,feasible,frac=.95,
 {
     py <- svdgpsepms(feasible,design,resp,frac,mtype=mtype,d=d,g=g)
     barval <- min(apply((resp-yobs)^2,2,sum))
-    valist <- list(yobs=yobs,barval=barval)
-    tm <- system.time(info <- oeiinfo(py,NULL,NULL,valist))
+    tm <- system.time(info <- oeiinfo(py,yobs,barval))
     ret <- list(info=info,time=tm[3])
     return(ret)
 }

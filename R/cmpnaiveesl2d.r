@@ -36,13 +36,12 @@ cmpnaiveesl2d <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,,drop=FALSE]
     }
-    xoptesl2d <- l2inv(xi,yi,yobs,grid,frac,d=d,g=g)
+    xoptesl2d <- esl2dinv(xi,yi,yobs,grid,frac,d=d,g=g)
     xoptnaive <- naiveinv(xi, yi, yobs, grid, frac, d=d, g=g)
     ret <- list(xx=xi,yy=yi,xoptesl2d=xoptesl2d,
                 xoptnaive=xoptnaive,maxinfo=maxinfo)
     return(ret)
 }
-
 cmpnaiveesl2dopt <- function(xi,yi,yobs,nadd,feasible,alpha,func,...,
                              type=c("mvapp","mvei","projei","oei"),
                              mtype=c("zmean","cmean","lmean"),
@@ -81,8 +80,8 @@ cmpnaiveesl2dopt <- function(xi,yi,yobs,nadd,feasible,alpha,func,...,
         yi <- cbind(yi,newy)
         feasible <- feasible[-newidx,,drop=FALSE]
     }
-    xoptesl2d <- l2invopt(xi,yi,yobs,frac,critype="esl2d",d=d,g=g)
-    xoptnaive <- l2invopt(xi,yi,yobs,frac,critype="naive",d=d,g=g)
+    xoptesl2d <- esl2dinvoptR(xi,yi,yobs,frac,critype="esl2d",d=d,g=g)
+    xoptnaive <- esl2dinvoptR(xi,yi,yobs,frac,critype="naive",d=d,g=g)
     ret <- list(xx=xi,yy=yi,xoptesl2d=xoptesl2d,
                 xoptnaive=xoptnaive,maxinfo=maxinfo)
     return(ret)

@@ -22,7 +22,7 @@ naive <- function(x,gpobjs,nbas,reddsq,cht)
     }
     crit <- sum(reddsq*(pmean-cht)^2)
 }
-ojsdev <- function(x,gpobj,q)
+sl2dev <- function(x,gpobj,q)
 {
     x <- matrix(x,nrow=1)
     py <- predict(gpobj,x)

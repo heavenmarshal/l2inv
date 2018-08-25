@@ -1,4 +1,4 @@
-esl2dinvseq <- function(xi,yi,yobs,nadd,feasible,grid,alpha,func,...,
+esl2dinvseq <- function(xi,yi,yobs,nadd,feasible,grid,func,...,
                         mtype=c("zmean","cmean","lmean"),
                         frac=.95,d=NULL,g=0.001,
                         nthread=4)
@@ -33,7 +33,6 @@ sl2invseq <- function(xi,yi,yobs,nadd,feasible,grid,mtype=c("zmean","cmean","lme
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
     maxinfo <- NULL
-    thres <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)

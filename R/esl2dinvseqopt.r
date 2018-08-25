@@ -28,13 +28,12 @@ esl2dinvseqopt <- function(xi,yi,yobs,nadd,feasible,func,...,
     return(ret)
 }
 sl2invseqopt <- function(xi,yi,yobs,nadd,feasible,mtype=c("zmean","cmean","lmean"),
-                         func,...,relthres=0,d=NULL,g=0.001,gactl=list())
+                         func,...,d=NULL,g=0.001,gactl=list())
 {
     xi <- as.matrix(xi)
     lw <- sqrt(apply((yi-yobs)^2,2,sum))
     wmin <- min(lw)
     maxinfo <- NULL
-    thres <- 0
     for(i in 1:nadd)
     {
         gpobj <- if(mtype=="zmean") gpsepms(lw,xi,d,g) else gpseplmms(lw,xi,mtype,d,g)

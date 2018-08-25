@@ -8,6 +8,7 @@ esl2dinv <- function(design,resp,yobs,feasible,frac=.95,
     numbas <- lbasis$numbas
     coeff <- lbasis$coeff
     reddsq <- lbasis$redd^2
+    cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
     nfea <- nrow(feasible)
     criter <- rep(0,nfea)
     for(i in 1:numbas)

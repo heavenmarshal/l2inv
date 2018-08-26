@@ -107,3 +107,37 @@ illuApproxMVEI <- function(design,resp,yobs,feasible,frac=.95,
     ret <- list(info=info,time=tm[3])
     return(ret)
 }
+
+esl2dtraceEI <- function(xi,yi,yobs,nadd,feasible,grid,func,...,
+                         mtype=c("zmean","cmean","lmean"),
+                         frac=.95,d=NULL,g=0.001,
+                         nthread=4)
+{
+    xi <- as.matrix(xi)
+    mtype <- match.arg(mtype)
+    tlen <- length(yobs)
+    infotrace <- vector("list",length=nadd)
+    pytrace <- vector("list",length=nadd)
+    chttrace <- vector("list",length=nadd)
+    for(i in 1:nadd)
+    {
+        lbasis <- buildBasis(yi,frac)
+        cht <- drop(t(lbasis$basis)%*%yobs/lbasis$redd^2)
+        barval <-  min(apply((yobs-yi)^2,2,sum))
+        py <- svdgpsepms(feasible,xi,yi,frac,mtype=mtype,nthread=nthread)
+        info <- oeiinfo(py,yobs,barval)
+        infotrace[[i]] <- list(feasible=feasible,info=info)
+        pytrace[[i]] <- py
+        chttrace[[i]] <- cht
+        newidx <- which.max(info)
+        newx <- feasible[newidx,]
+        newy <- func(newx,...)
+        xi <- rbind(xi,newx)
+        yi <- cbind(yi,newy)
+        feasible <- feasible[-newidx,,drop=FALSE]
+    }
+    xopt <- esl2dinv(xi,yi,yobs,grid,frac,d=d,g=g)
+    ret <- list(xx=xi,yy=yi,xopt=xopt,infotrace=infotrace,
+                pytrace=pytrace,chttrace=chttrace)
+    return(ret)
+}

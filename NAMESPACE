@@ -6,11 +6,9 @@ export(esl2dinv,sl2inv,esl2dinvseq,sl2invseq,
        illuExactEI, illuApproxEI, illuMCMVEI,
        illuApproxMVEI,oeiinfo,
        cmpnaiveesl2d,cmpnaiveesl2dopt,
-       svdgpsepms
-       )
+       svdgpsepms,esl2dtraceEI)
 importFrom(parallel,makeCluster)
 importFrom(parallel,parApply)
 importFrom(parallel,stopCluster)
 importFrom(lhs,maximinLHS)
-importFrom(lhs,randomLHS)
 importFrom(rgenoud,genoud)
